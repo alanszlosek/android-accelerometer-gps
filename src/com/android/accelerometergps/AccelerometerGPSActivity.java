@@ -134,10 +134,13 @@ public class AccelerometerGPSActivity extends Activity {
 		private static final int TWO_MINUTES = 1000 * 60 * 2;
 		//private Location currentBestLocation;
 		private ArrayList<Location> locations;
+		private long gpsStart;
 		
 		
 		public void start() {
 			locations = new ArrayList<Location>();
+			gpsStart = System.currentTimeMillis();
+			// Will hopefully report location updates every 400 milliseconds
 			mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 400, 0, this);
 		}
 		public void stop() {
@@ -159,19 +162,6 @@ public class AccelerometerGPSActivity extends Activity {
 			this.stop();
 			
 			textViewStatus.setText("GPS");
-			
-			/*
-			
-			if (isBetterLocation(location, currentBestLocation)){
-				currentBestLocation = location;
-				
-				tv = (TextView)findViewById(R.id.latitude);
-				tv.setText( String.format("%f", location.getLatitude()) );
-				tv = (TextView)findViewById(R.id.longitude);
-				tv.setText( String.format("%f", location.getLongitude()) );
-			} else {
-			*/
-				//location = currentBestLocation;
 		
 			// THINGS I'D LIKE TO LOG
 			// Compared to current millis, how old is this location?
@@ -188,16 +178,24 @@ public class AccelerometerGPSActivity extends Activity {
 				}
 			}
 			
+			// How do we know if GPS fails altogether?
+			
 			tv = (TextView)findViewById(R.id.latitude);
 			tv.setText( String.format("%f", currentBestLocation.getLatitude()) );
 			tv = (TextView)findViewById(R.id.longitude);
 			tv.setText( String.format("%f", currentBestLocation.getLongitude()) );
-				
-			data = new ContentValues();
-			data.put("timestamp", currentBestLocation.getTime());
-			data.put("longitude", currentBestLocation.getLongitude());
-			data.put("latitude", currentBestLocation.getLatitude());
-			db.insert("locations", null, data);
+			
+			for (int i = 0; i < locations.size(); i++) {
+				l = locations.get(i);
+				data = new ContentValues();
+				data.put("milliseconds", l.getTime());
+				data.put("longitude", l.getLongitude());
+				data.put("latitude", l.getLatitude());
+				data.put("altitude", l.getAltitude());
+				data.put("gpsStart", gpsStart);
+				data.put("best", (l == currentBestLocation ? 1: 0));
+				db.insert("locations", null, data);
+			}
 			
 			/*
 			df = new DateFormat();
@@ -292,7 +290,7 @@ public class AccelerometerGPSActivity extends Activity {
 
 	    @Override
 	    public void onCreate(SQLiteDatabase db) {
-	        db.execSQL("create table locations (timestamp integer, latitude real, longitude real);");
+	        db.execSQL("create table locations (milliseconds integer, latitude real, longitude real, altitude real, gpsStart integer, best integer);");
 	    }
 
 		@Override
