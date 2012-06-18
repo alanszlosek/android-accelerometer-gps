@@ -1,6 +1,7 @@
 package com.android.accelerometergps;
 
 import java.util.ArrayList;
+import java.util.Date;
 
 import android.app.Activity;
 import android.location.Location;
@@ -16,9 +17,11 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.text.format.DateFormat;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
 
 public class AccelerometerGPSActivity extends Activity {
@@ -34,6 +37,7 @@ public class AccelerometerGPSActivity extends Activity {
 	private myLocationListener llGPS;
 	
 	private TextView textViewStatus, textViewMoving;
+	private EditText editTextLocations;
 	private SQLiteOpenHelper dbHelper;
 	private SQLiteDatabase db;
 	
@@ -127,14 +131,12 @@ public class AccelerometerGPSActivity extends Activity {
 	}
 	
 	private class myLocationListener implements LocationListener {
-		private int iCount;
 		private static final int TWO_MINUTES = 1000 * 60 * 2;
-		private Location currentBestLocation;
+		//private Location currentBestLocation;
 		private ArrayList<Location> locations;
 		
 		
 		public void start() {
-			iCount = 0;
 			locations = new ArrayList<Location>();
 			mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 400, 0, this);
 		}
@@ -145,12 +147,14 @@ public class AccelerometerGPSActivity extends Activity {
 		public void onLocationChanged(Location location) {
 			TextView tv;
 			ContentValues data;
+			Date d;
+			DateFormat df;
+			Location l, currentBestLocation;
 
 			locations.add(location);
-
-			if (iCount > 3) return;
-			
-			iCount++;
+			// Only process when we've got 3 locations
+			if (locations.size() < 3) return;
+			if (locations.size() > 3) return;
 			
 			this.stop();
 			
@@ -169,18 +173,50 @@ public class AccelerometerGPSActivity extends Activity {
 			*/
 				//location = currentBestLocation;
 		
-			// Choose best from current list
-				tv = (TextView)findViewById(R.id.latitude);
-				tv.setText( String.format("%f", location.getLatitude()) );
-				tv = (TextView)findViewById(R.id.longitude);
-				tv.setText( String.format("%f", location.getLongitude()) );
-			//}
-			data = new ContentValues();
-			data.put("timestamp", location.getTime());
-			data.put("longitude", location.getLongitude());
-			data.put("latitude", location.getLatitude());
-			db.insert("locations", null, data);
+			// THINGS I'D LIKE TO LOG
+			// Compared to current millis, how old is this location?
+			// How long does it take to get location
 		
+			// Choose best from current list
+				
+			//}
+			currentBestLocation = locations.get(0);
+			for (int i = 1; i < locations.size(); i++) {
+				l = locations.get(i);
+				if (isBetterLocation(l, currentBestLocation)){
+					currentBestLocation = l;
+				}
+			}
+			
+			tv = (TextView)findViewById(R.id.latitude);
+			tv.setText( String.format("%f", currentBestLocation.getLatitude()) );
+			tv = (TextView)findViewById(R.id.longitude);
+			tv.setText( String.format("%f", currentBestLocation.getLongitude()) );
+				
+			data = new ContentValues();
+			data.put("timestamp", currentBestLocation.getTime());
+			data.put("longitude", currentBestLocation.getLongitude());
+			data.put("latitude", currentBestLocation.getLatitude());
+			db.insert("locations", null, data);
+			
+			/*
+			df = new DateFormat();
+			
+			// Show these locations
+			for (int i = 0; i < locations.size(); i++) {
+				l = locations.get(i);
+				// Human date
+				d = new Date(l.getTime());
+				editTextLocations.append(
+					String.format(
+						"%s %d %d\r\n",
+						df.format("hh:mm:ss", d),
+						l.getLongitude(),
+						l.getLatitude()
+					)
+				);
+			}
+		*/
 			
 			rFunTimes.start();
 		}
@@ -275,6 +311,7 @@ public class AccelerometerGPSActivity extends Activity {
 		
 		textViewMoving = (TextView)findViewById(R.id.moving);
 		textViewStatus = (TextView)findViewById(R.id.status);
+		editTextLocations = (EditText)findViewById(R.id.textLocations);
 		
 		mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);		
 		mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
