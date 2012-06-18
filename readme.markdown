@@ -1,1 +1,1 @@
-Wanted to track GPS in a batter-efficient fashion, without having to turn the track app on and off throughout the day as I walk around. This is an attempt to use the accelerometer (pinging every 5 seconds) to detect movement and then pull GPS coordinates.
+Wanted to track GPS in a battery-efficient fashion, without having to turn the track app on and off throughout the day as I walk around. This is an attempt to use the accelerometer (pinging every 5 seconds) to detect movement and then pull GPS coordinates.
