@@ -31,6 +31,7 @@ import android.widget.Toast;
 public class GPSingService extends Service {
 	protected int iNotificationId = 123;
 	protected int iLocations = 0;
+	protected int iSinceMotion = 0;
 	private Notification mNotification;
 
 	private static volatile PowerManager.WakeLock wakeLock1 = null;
@@ -140,6 +141,7 @@ public class GPSingService extends Service {
  			
  			// Appeared to be moving 50% of the time?
  			if ((iSignificant / iReadings) > 0.5) {
+ 				iSinceMotion = 0;
  				update(GPSingService.this, "Moving", 1);
  				Log.d("GPSing", "Moving");
  				
@@ -152,6 +154,7 @@ public class GPSingService extends Service {
  				rFunTimes3.start();
  				
  			} else {
+ 				iSinceMotion++;
  				update(GPSingService.this, "Stationary", 0);
  				Log.d("GPSing", "Stationary");
  				sleep();
@@ -309,11 +312,21 @@ public class GPSingService extends Service {
  	
  	public void sleep() {
 	    AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
-        
         Intent i = new Intent(this, GPSingReceiver.class);
-        
         Calendar cal = new GregorianCalendar();
-        cal.add(Calendar.SECOND, 10);
+        
+        if (iSinceMotion < 3) {
+        	Log.d("GPSing", "Waiting 10 seconds");
+        	cal.add(Calendar.SECOND, 10);
+        } else {
+        	if (iSinceMotion < 6) {
+        		Log.d("GPSing", "Waiting 30 seconds");
+        		cal.add(Calendar.SECOND, 30);
+        	} else {
+        		Log.d("GPSing", "Waiting 60 seconds");
+        		cal.add(Calendar.SECOND, 60);
+        	}
+        }
 
         PendingIntent pi = PendingIntent.getBroadcast(this, 0, i, 0);
         mgr.set(
