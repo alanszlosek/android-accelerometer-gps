@@ -90,8 +90,10 @@ public class GPSingService extends Service {
      
   	private class FunTimes2 implements SensorEventListener {
  		private int iReadings, iSignificant;
+ 		private long iTimestamp;
  		// Walking seems to need 0.6
- 		private double dThreshold = 0.6; 		
+ 		private double dThreshold = 3.0;		
+ 		private double x, y, z;
  		SensorManager mSensorManager = null;
 
  		
@@ -108,10 +110,12 @@ public class GPSingService extends Service {
  		
  		public void start() {
  			iReadings = iSignificant = 0;
+ 			x = y = z = 0;
+ 			iTimestamp = System.currentTimeMillis();
  			// Not sure which one to use here
  			mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
  			Sensor mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
- 			mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+ 			mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
  		}
  		public void stop() {
  			mSensorManager.unregisterListener(this);
@@ -123,24 +127,24 @@ public class GPSingService extends Service {
  		 */
  		// Think i need to keep timestamps, so I can throw out very recent readings
  		protected void readAccelerometer(SensorEvent event) {
+ 			double hey;
  			iReadings++;
+ 			x += Math.abs(event.values[0]);
+ 			y += Math.abs(event.values[1]);
+ 			z += Math.abs(event.values[2]);
  			
- 			if (
- 				(Math.abs(event.values[0]) + Math.abs(event.values[1]) + Math.abs(event.values[2]) - 9.8)
- 				>
- 				dThreshold
- 			) {
- 				iSignificant++;
- 			}
- 			
- 			if (iReadings < 6) {
- 				return;
- 			}
+ 			if ( (System.currentTimeMillis() - iTimestamp) < 500) return;
  			
  			this.stop();
  			
+ 			
+ 			
+ 			hey = ((x + y + z) / iReadings) - 9.8;
+ 			Log.d("GPSing", String.format("got %d readings. %f %f %f %f", iReadings, x, y, z, hey));
+ 			if (dThreshold < hey) {
+ 			
  			// Appeared to be moving 50% of the time?
- 			if ((iSignificant / iReadings) > 0.5) {
+ 			//if ((iSignificant / iReadings) > 0.5) {
  				iSinceMotion = 0;
  				update(GPSingService.this, "Moving", 1);
  				Log.d("GPSing", "Moving");
@@ -157,7 +161,7 @@ public class GPSingService extends Service {
  				iSinceMotion++;
  				update(GPSingService.this, "Stationary", 0);
  				Log.d("GPSing", "Stationary");
- 				sleep();
+ 				sleep(0);
  				getLock(0, GPSingService.this.getApplicationContext()).release();
  			}
  		}
@@ -224,7 +228,7 @@ public class GPSingService extends Service {
  				db.insert("locations", null, data);
  			}
  			db.close();
- 			sleep();
+ 			sleep(30);
  			getLock(1, GPSingService.this.getApplicationContext()).release();
  		}
 
@@ -310,22 +314,22 @@ public class GPSingService extends Service {
  	}
  	
  	
- 	public void sleep() {
+ 	public void sleep(int w) {
 	    AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
         Intent i = new Intent(this, GPSingReceiver.class);
         Calendar cal = new GregorianCalendar();
         
-        if (iSinceMotion < 3) {
-        	Log.d("GPSing", "Waiting 10 seconds");
-        	cal.add(Calendar.SECOND, 10);
+        if (w == 0) {
+	        if (iSinceMotion < 3) {
+	        	Log.d("GPSing", "Waiting 30 seconds");
+	        	cal.add(Calendar.SECOND, 30);
+	        } else {
+	        	
+	    		Log.d("GPSing", "Waiting 60 seconds");
+	    		cal.add(Calendar.SECOND, 60);
+	        }
         } else {
-        	if (iSinceMotion < 6) {
-        		Log.d("GPSing", "Waiting 30 seconds");
-        		cal.add(Calendar.SECOND, 30);
-        	} else {
-        		Log.d("GPSing", "Waiting 60 seconds");
-        		cal.add(Calendar.SECOND, 60);
-        	}
+        	cal.add(Calendar.SECOND, w);
         }
 
         PendingIntent pi = PendingIntent.getBroadcast(this, 0, i, 0);
