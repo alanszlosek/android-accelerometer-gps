@@ -91,9 +91,6 @@ public class GPSingService extends Service {
   	private class FunTimes2 implements SensorEventListener {
  		private int iReadings, iSignificant;
  		private long iTimestamp;
- 		// Walking seems to need 0.6
- 		private double dThreshold = 3.0;		
- 		private double x, y, z;
  		SensorManager mSensorManager = null;
 
  		
@@ -109,13 +106,13 @@ public class GPSingService extends Service {
  		}
  		
  		public void start() {
- 			iReadings = iSignificant = 0;
- 			x = y = z = 0;
+ 			iReadings = 0;
+ 			iSignificant = 0;
  			iTimestamp = System.currentTimeMillis();
  			// Not sure which one to use here
  			mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
  			Sensor mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
- 			mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
+ 			mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
  		}
  		public void stop() {
  			mSensorManager.unregisterListener(this);
@@ -127,24 +124,43 @@ public class GPSingService extends Service {
  		 */
  		// Think i need to keep timestamps, so I can throw out very recent readings
  		protected void readAccelerometer(SensorEvent event) {
- 			double hey;
+ 			double accel, x, y, z, threshold;
  			iReadings++;
- 			x += Math.abs(event.values[0]);
- 			y += Math.abs(event.values[1]);
- 			z += Math.abs(event.values[2]);
+ 			x = event.values[0];
+ 			y = event.values[1];
+ 			z = event.values[2];
+ 			threshold = 0.6;
  			
- 			if ( (System.currentTimeMillis() - iTimestamp) < 500) return;
+ 			accel = Math.abs(
+	 					Math.sqrt(
+		 					Math.pow(x,2)
+		 					+
+		 					Math.pow(y,2)
+		 					+
+		 					Math.pow(z,2)
+	 					)
+	 					-
+	 					9.8
+	 				);
+ 			if (accel > 0.6) {
+ 				Log.d("GPSing", "sig");
+ 				iSignificant++;
+ 			}
+ 			
+ 			Log.d("GPSing", String.format("event: %f %f %f %f %f",
+ 					x, y, z, accel, 0.600));
+ 			
+ 			// Get readings for 1 second
+ 			if ( (System.currentTimeMillis() - iTimestamp) < 1000) return;
  			
  			this.stop();
- 			
- 			
- 			
- 			hey = ((x + y + z) / iReadings) - 9.8;
- 			Log.d("GPSing", String.format("got %d readings. %f %f %f %f", iReadings, x, y, z, hey));
- 			if (dThreshold < hey) {
+ 			 			
+ 			Log.d("GPSing", String.format("readings: %d significant: %d",
+ 					iReadings, iSignificant));
+
+ 			if (((1.0*iSignificant) / iReadings) > 0.30) {
  			
  			// Appeared to be moving 50% of the time?
- 			//if ((iSignificant / iReadings) > 0.5) {
  				iSinceMotion = 0;
  				update(GPSingService.this, "Moving", 1);
  				Log.d("GPSing", "Moving");
@@ -191,10 +207,12 @@ public class GPSingService extends Service {
  			ContentValues data;
  			Location l, currentBestLocation;
 
- 			locations.add(location);
+ 			//if (location.getAccuracy() < 100) {
+ 				locations.add(location);
+ 			//}
  			// Only process when we've got 3 locations
- 			if (locations.size() < 3) return;
- 			if (locations.size() > 3) return;
+ 			if (locations.size() < 6) return;
+ 			if (locations.size() > 6) return;
  			
  			this.stop();
  					
@@ -224,6 +242,7 @@ public class GPSingService extends Service {
  				data.put("latitude", l.getLatitude());
  				data.put("altitude", l.getAltitude());
  				data.put("gpsStart", gpsStart);
+ 				data.put("accuracy", l.getAccuracy());
  				data.put("best", (l == currentBestLocation ? 1: 0));
  				db.insert("locations", null, data);
  			}
@@ -303,7 +322,7 @@ public class GPSingService extends Service {
 
  	    @Override
  	    public void onCreate(SQLiteDatabase db) {
- 	        db.execSQL("create table locations (milliseconds integer, latitude real, longitude real, altitude real, gpsStart integer, best integer);");
+ 	        db.execSQL("create table locations (milliseconds integer, latitude real, longitude real, altitude real, gpsStart integer, accuracy real, best integer);");
  	    }
 
  		@Override

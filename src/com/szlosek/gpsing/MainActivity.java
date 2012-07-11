@@ -30,7 +30,7 @@ public class MainActivity extends Activity {
     protected void onStart() {
 		super.onStart();
 		
-		Log.d("Loc","doing it");
+		Log.d("GPSing","Activity started");
 		again();
     }
     
