@@ -361,13 +361,13 @@ public class GPSingService extends Service {
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		Log.d("Service","created");
+		Log.d("GPSing", "Service.onCreate");
 		
 		// Set the icon, scrolling text and timestamp
 		mNotification = new Notification(R.drawable.stationary, "Stationary", System.currentTimeMillis());
 		// The PendingIntent to launch our activity if the user selects this notification
 		PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-				new Intent(this, GPSingService.class), 0);
+				new Intent(this, MainActivity.class), 0);
 
 		// Set the info for the views that show in the notification panel.
 		mNotification.setLatestEventInfo(this, "GPSing", "Stationary", contentIntent);
@@ -390,7 +390,7 @@ public class GPSingService extends Service {
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Log.d("GPSing","Service.StartCommand");
+		Log.d("GPSing", "Service.onStartCommand");
 		// Will this be destroyed?
 		FunTimes2 ft = new FunTimes2();
 		ft.start();
@@ -408,6 +408,6 @@ public class GPSingService extends Service {
 
 	@Override
 	public void onDestroy() {
-		Log.d("Service", "Destroyed");
+		Log.d("GPSing", "Service.onDestroy");
 	}
 }
