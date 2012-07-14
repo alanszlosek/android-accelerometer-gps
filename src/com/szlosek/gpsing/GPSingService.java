@@ -28,12 +28,26 @@ import android.util.Log;
 import android.widget.Toast;
 
 
-public class GPSingService extends Service {
+public class GPSingService extends Service implements SensorEventListener, LocationListener {
+	// Notification-related
 	protected int iNotificationId = 123;
 	protected int iLocations = 0;
 	protected int iSinceMotion = 0;
 	private Notification mNotification;
 
+	// Accelerometer-related
+	private int iAccelReadings, iAccelSignificantReadings;
+	private long iAccelTimestamp;
+	private SensorManager mSensorManager;
+
+	// GPS-related
+	private Location currentBestLocation;
+	private long lGPSTimestamp;
+	private LocationManager mLocationManager = null;
+	private Location bestLocation = null;
+	private static final int TWO_MINUTES = 1000 * 60 * 2;
+
+	// Other
 	private static volatile PowerManager.WakeLock wakeLock1 = null;
 	private static volatile PowerManager.WakeLock wakeLock2 = null;
 	
@@ -87,233 +101,207 @@ public class GPSingService extends Service {
  			nm.notify(123, mNotification);
  	}
 
-     
-  	private class FunTimes2 implements SensorEventListener {
- 		private int iReadings, iSignificant;
- 		private long iTimestamp;
- 		SensorManager mSensorManager = null;
 
- 		
- 		@Override
- 		public void onSensorChanged(SensorEvent event) {
- 			if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
- 				readAccelerometer(event);
- 			}
- 		}
- 		@Override
- 		public void onAccuracyChanged(Sensor sensor, int accuracy) {
- 			// can be safely ignored for this demo
- 		}
- 		
- 		public void start() {
- 			iReadings = 0;
- 			iSignificant = 0;
- 			iTimestamp = System.currentTimeMillis();
- 			// Not sure which one to use here
- 			mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
- 			Sensor mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
- 			mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
- 		}
- 		public void stop() {
- 			mSensorManager.unregisterListener(this);
- 		}
- 		
- 		
- 		/*
- 		 * Thinking I don't want delta, but absolutes
- 		 */
- 		// Think i need to keep timestamps, so I can throw out very recent readings
- 		protected void readAccelerometer(SensorEvent event) {
- 			double accel, x, y, z, threshold;
- 			iReadings++;
- 			x = event.values[0];
- 			y = event.values[1];
- 			z = event.values[2];
- 			threshold = 0.6;
- 			
- 			accel = Math.abs(
-	 					Math.sqrt(
-		 					Math.pow(x,2)
-		 					+
-		 					Math.pow(y,2)
-		 					+
-		 					Math.pow(z,2)
-	 					)
-	 					-
-	 					9.8
-	 				);
- 			if (accel > 0.6) {
- 				Log.d("GPSing", "sig");
- 				iSignificant++;
- 			}
- 			
- 			Log.d("GPSing", String.format("event: %f %f %f %f %f",
- 					x, y, z, accel, 0.600));
- 			
- 			// Get readings for 1 second
- 			if ( (System.currentTimeMillis() - iTimestamp) < 1000) return;
- 			
- 			this.stop();
- 			 			
- 			Log.d("GPSing", String.format("readings: %d significant: %d",
- 					iReadings, iSignificant));
+	// ACCELEROMETER METHODS
+	public void startAccelerometer() {
+		iAccelReadings = 0;
+		iAccelSignificantReadings = 0;
+		iAccelTimestamp = System.currentTimeMillis();
+		// should probably store handles to these earlier, when service is created
+		mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+		Sensor mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+		mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+	}
 
- 			if (((1.0*iSignificant) / iReadings) > 0.30) {
- 			
- 			// Appeared to be moving 50% of the time?
- 				iSinceMotion = 0;
- 				update(GPSingService.this, "Moving", 1);
- 				Log.d("GPSing", "Moving");
- 				
- 				// Get new lock for GPS so we can turn off screen
- 				getLock(1, GPSingService.this.getApplicationContext()).acquire();
- 				getLock(0, GPSingService.this.getApplicationContext()).release();
- 				
- 				// Start GPS
- 				FunTimes3 rFunTimes3 = new FunTimes3();
- 				rFunTimes3.start();
- 				
- 			} else {
- 				iSinceMotion++;
- 				update(GPSingService.this, "Stationary", 0);
- 				Log.d("GPSing", "Stationary");
- 				sleep(0);
- 				getLock(0, GPSingService.this.getApplicationContext()).release();
- 			}
- 		}
- 	}
+	public void stopAccelerometer() {
+		mSensorManager.unregisterListener(this);
+	}
 
+	@Override
+	public void onSensorChanged(SensorEvent event) {
+		double accel, x, y, z, threshold;
+		if (event.sensor.getType() != Sensor.TYPE_ACCELEROMETER) {
+			return;
+		}
+
+		iAccelReadings++;
+		x = event.values[0];
+		y = event.values[1];
+		z = event.values[2];
+		threshold = 0.6;
+		
+		accel = Math.abs(
+			Math.sqrt(
+				Math.pow(x,2)
+				+
+				Math.pow(y,2)
+				+
+				Math.pow(z,2)
+			)
+			-
+			9.8
+		);
+		if (accel > 0.6) {
+			iAccelSignificantReadings++;
+		}
+		
+		Log.d("GPSing", String.format("event: %f %f %f %f %f", x, y, z, accel, 0.600));
+		
+		// Get readings for 1 second
+		if ( (System.currentTimeMillis() - iAccelTimestamp) < 1000) return;
+		
+		stopAccelerometer();
+					
+		Log.d("GPSing", String.format("readings: %d significant: %d", iAccelReadings, iAccelSignificantReadings));
+
+		// Appeared to be moving 30% of the time?
+		// If the bar is this low, why not report motion at the first significant reading and be done with it?
+		if (((1.0*iAccelSignificantReadings) / iAccelReadings) > 0.30) {
+			iSinceMotion = 0;
+			update(GPSingService.this, "Moving", 1);
+			Log.d("GPSing", "Moving");
+			
+			// Get new lock for GPS so we can turn off screen
+			getLock(1, GPSingService.this.getApplicationContext()).acquire();
+			getLock(0, GPSingService.this.getApplicationContext()).release();
+			
+			// Start GPS
+			startGPS();
+			
+		} else {
+			iSinceMotion++;
+			update(GPSingService.this, "Stationary", 0);
+			Log.d("GPSing", "Stationary");
+			sleep(0);
+			getLock(0, GPSingService.this.getApplicationContext()).release();
+ 		}
+	}
+
+	@Override
+	public void onAccuracyChanged(Sensor sensor, int accuracy) {
+		// can be safely ignored for this demo
+	}
+ 		
   	
-  	private class FunTimes3 implements LocationListener {
- 		private static final int TWO_MINUTES = 1000 * 60 * 2;
- 		//private Location currentBestLocation;
- 		private ArrayList<Location> locations;
- 		private long gpsStart;
+
+	// GPS METHODS
+	public void startGPS() {
+		lGPSTimestamp = System.currentTimeMillis();
+		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 200, 0, this);
+	}
+
+	public void stopGPS() {
+		mLocationManager.removeUpdates(this);
+	}
  		
- 		private LocationManager mLocationManager = null;
- 		
- 		public void start() {
- 			locations = new ArrayList<Location>();
- 			gpsStart = System.currentTimeMillis();
- 			mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
- 			// Will hopefully report location updates every 400 milliseconds
- 			mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 400, 0, this);
- 		}
- 		public void stop() {
- 			mLocationManager.removeUpdates(this);
- 		}
- 		
- 		public void onLocationChanged(Location location) {
- 			ContentValues data;
- 			Location l, currentBestLocation;
+	public void onLocationChanged(Location location) {
+		ContentValues data;
+		int a = 10;
 
- 			//if (location.getAccuracy() < 100) {
- 				locations.add(location);
- 			//}
- 			// Only process when we've got 3 locations
- 			if (locations.size() < 6) return;
- 			if (locations.size() > 6) return;
- 			
- 			this.stop();
- 					
- 			// THINGS I'D LIKE TO LOG
- 			// Compared to current millis, how old is this location?
- 			// How long does it take to get location
- 		
- 			// Choose best from current list
- 				
- 			//}
- 			currentBestLocation = locations.get(0);
- 			for (int i = 1; i < locations.size(); i++) {
- 				l = locations.get(i);
- 				if (isBetterLocation(l, currentBestLocation)){
- 					currentBestLocation = l;
- 				}
- 			}
- 			
- 			// How do we know if GPS fails altogether?
- 			SQLiteOpenHelper dbHelper = new LocationsOpenHelper(GPSingService.this);
- 			SQLiteDatabase db = dbHelper.getWritableDatabase();
- 			for (int i = 0; i < locations.size(); i++) {
- 				l = locations.get(i);
- 				data = new ContentValues();
- 				data.put("milliseconds", l.getTime());
- 				data.put("longitude", l.getLongitude());
- 				data.put("latitude", l.getLatitude());
- 				data.put("altitude", l.getAltitude());
- 				data.put("gpsStart", gpsStart);
- 				data.put("accuracy", l.getAccuracy());
- 				data.put("best", (l == currentBestLocation ? 1: 0));
- 				db.insert("locations", null, data);
- 			}
- 			db.close();
- 			sleep(30);
- 			getLock(1, GPSingService.this.getApplicationContext()).release();
- 		}
+		Log.d("GPSing", String.format("%f", location.getAccuracy()));
 
- 		public void onStatusChanged(String provider, int status, Bundle extras) {}
+		// Determine whether to discard the location or not ...
+		// hope this ends up being a quick calculation
+		if (currentBestLocation != null) {
+			if (isBetterLocation(location, currentBestLocation)){
+				currentBestLocation = location;
+			}
+		} else {
+			currentBestLocation = location;
+		}
+	
+		// Quick and dirty timeout ... will be replaced by AlarmManger-based timeout
+		if (System.currentTimeMillis() - lGPSTimestamp < 60000) {
+			return;
+		}
+		
+		stopGPS();
+				
+		// THINGS I'D LIKE TO LOG
+		// Compared to current millis, how old is this location?
+		// How long does it take to get location
+	
+		
+		SQLiteOpenHelper dbHelper = new LocationsOpenHelper(GPSingService.this);
+		SQLiteDatabase db = dbHelper.getWritableDatabase();
+		data = new ContentValues();
+		data.put("milliseconds", currentBestLocation.getTime());
+		data.put("longitude", currentBestLocation.getLongitude());
+		data.put("latitude", currentBestLocation.getLatitude());
+		data.put("altitude", currentBestLocation.getAltitude());
+		data.put("gpsStart", lGPSTimestamp);
+		data.put("accuracy", currentBestLocation.getAccuracy());
+		data.put("best", 0);
+		db.insert("locations", null, data);
+		db.close();
+		// Don't like this being hardcoded here ... need a better scheme for handling this
+		sleep(30);
+		getLock(1, GPSingService.this.getApplicationContext()).release();
+	}
 
- 		public void onProviderEnabled(String provider) {}
+	public void onStatusChanged(String provider, int status, Bundle extras) {}
 
- 		public void onProviderDisabled(String provider) {}
- 		
- 		
- 		
+	public void onProviderEnabled(String provider) {}
 
- 		/** Determines whether one Location reading is better than the current Location fix
- 		  * @param location  The new Location that you want to evaluate
- 		  * @param currentBestLocation  The current Location fix, to which you want to compare the new one
- 		  */
- 		protected boolean isBetterLocation(Location location, Location currentBestLocation) {
- 		    if (currentBestLocation == null) {
- 		        // A new location is always better than no location
- 		        return true;
- 		    }
+	public void onProviderDisabled(String provider) {}
+	
+	/** Determines whether one Location reading is better than the current Location fix
+	  * @param location  The new Location that you want to evaluate
+	  * @param currentBestLocation  The current Location fix, to which you want to compare the new one
+	  */
+	protected boolean isBetterLocation(Location location, Location currentBestLocation) {
+	    if (currentBestLocation == null) {
+		// A new location is always better than no location
+		return true;
+	    }
 
- 		    // Check whether the new location fix is newer or older
- 		    long timeDelta = location.getTime() - currentBestLocation.getTime();
- 		    boolean isSignificantlyNewer = timeDelta > TWO_MINUTES;
- 		    boolean isSignificantlyOlder = timeDelta < -TWO_MINUTES;
- 		    boolean isNewer = timeDelta > 0;
+	    // Check whether the new location fix is newer or older
+	    long timeDelta = location.getTime() - currentBestLocation.getTime();
+	    boolean isSignificantlyNewer = timeDelta > TWO_MINUTES;
+	    boolean isSignificantlyOlder = timeDelta < -TWO_MINUTES;
+	    boolean isNewer = timeDelta > 0;
 
- 		    // If it's been more than two minutes since the current location, use the new location
- 		    // because the user has likely moved
- 		    if (isSignificantlyNewer) {
- 		        return true;
- 		    // If the new location is more than two minutes older, it must be worse
- 		    } else if (isSignificantlyOlder) {
- 		        return false;
- 		    }
+	    // If it's been more than two minutes since the current location, use the new location
+	    // because the user has likely moved
+	    if (isSignificantlyNewer) {
+		return true;
+	    // If the new location is more than two minutes older, it must be worse
+	    } else if (isSignificantlyOlder) {
+		return false;
+	    }
 
- 		    // Check whether the new location fix is more or less accurate
- 		    int accuracyDelta = (int) (location.getAccuracy() - currentBestLocation.getAccuracy());
- 		    boolean isLessAccurate = accuracyDelta > 0;
- 		    boolean isMoreAccurate = accuracyDelta < 0;
- 		    boolean isSignificantlyLessAccurate = accuracyDelta > 200;
+	    // Check whether the new location fix is more or less accurate
+	    int accuracyDelta = (int) (location.getAccuracy() - currentBestLocation.getAccuracy());
+	    boolean isLessAccurate = accuracyDelta > 0;
+	    boolean isMoreAccurate = accuracyDelta < 0;
+	    boolean isSignificantlyLessAccurate = accuracyDelta > 200;
 
- 		    // Check if the old and new location are from the same provider
- 		    boolean isFromSameProvider = isSameProvider(location.getProvider(),
- 		            currentBestLocation.getProvider());
+	    // Check if the old and new location are from the same provider
+	    boolean isFromSameProvider = isSameProvider(location.getProvider(),
+		    currentBestLocation.getProvider());
 
- 		    // Determine location quality using a combination of timeliness and accuracy
- 		    if (isMoreAccurate) {
- 		        return true;
- 		    } else if (isNewer && !isLessAccurate) {
- 		        return true;
- 		    } else if (isNewer && !isSignificantlyLessAccurate && isFromSameProvider) {
- 		        return true;
- 		    }
- 		    return false;
- 		}
+	    // Determine location quality using a combination of timeliness and accuracy
+	    if (isMoreAccurate) {
+		return true;
+	    } else if (isNewer && !isLessAccurate) {
+		return true;
+	    } else if (isNewer && !isSignificantlyLessAccurate && isFromSameProvider) {
+		return true;
+	    }
+	    return false;
+	}
 
- 		/** Checks whether two providers are the same */
- 		private boolean isSameProvider(String provider1, String provider2) {
- 		    if (provider1 == null) {
- 		      return provider2 == null;
- 		    }
- 		    return provider1.equals(provider2);
- 		}
- 	}
+	/** Checks whether two providers are the same */
+	private boolean isSameProvider(String provider1, String provider2) {
+	    if (provider1 == null) {
+	      return provider2 == null;
+	    }
+	    return provider1.equals(provider2);
+	}
+
+
+	// OTHER
  	
  	public class LocationsOpenHelper extends SQLiteOpenHelper {
  	    public LocationsOpenHelper(Context context) {
@@ -341,11 +329,11 @@ public class GPSingService extends Service {
         if (w == 0) {
 	        if (iSinceMotion < 3) {
 	        	Log.d("GPSing", "Waiting 30 seconds");
-	        	cal.add(Calendar.SECOND, 30);
+	        	cal.add(Calendar.SECOND, 5);
 	        } else {
 	        	
 	    		Log.d("GPSing", "Waiting 60 seconds");
-	    		cal.add(Calendar.SECOND, 60);
+	    		cal.add(Calendar.SECOND, 10);
 	        }
         } else {
         	cal.add(Calendar.SECOND, w);
@@ -392,8 +380,7 @@ public class GPSingService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Log.d("GPSing", "Service.onStartCommand");
 		// Will this be destroyed?
-		FunTimes2 ft = new FunTimes2();
-		ft.start();
+		startAccelerometer();
 		
 		
 		return START_REDELIVER_INTENT;
