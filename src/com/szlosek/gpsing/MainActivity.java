@@ -43,12 +43,8 @@ public class MainActivity extends Activity {
         Calendar cal = new GregorianCalendar();
         cal.add(Calendar.SECOND, 5);
         
-
         PendingIntent pi = PendingIntent.getBroadcast(this, 0, i, 0);
-        mgr.set(
-        		AlarmManager.RTC_WAKEUP,
-        		cal.getTimeInMillis(),
-        		pi);
+        mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
     }
 
 }

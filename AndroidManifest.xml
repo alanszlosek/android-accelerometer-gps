@@ -23,6 +23,7 @@
             </intent-filter>
         </activity>
         <receiver android:name="com.szlosek.gpsing.GPSingReceiver" />
+        <receiver android:name="com.szlosek.gpsing.GPSTimeoutReceiver" />
         <service android:name="com.szlosek.gpsing.GPSingService" />
     </application>
 

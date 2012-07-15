@@ -50,6 +50,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	// Other
 	private static volatile PowerManager.WakeLock wakeLock1 = null;
 	private static volatile PowerManager.WakeLock wakeLock2 = null;
+	private static volatile PowerManager.WakeLock wakeLock3 = null;
 	
 	// Called from GPSingReceiver ...
 	// Acquires a WakeLock, polls Accelerometer, and then may poll GPS
@@ -60,16 +61,21 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		i.setClass(ctxt, GPSingService.class); // Not certain I need this anymore
 		ctxt.startService(i);
 	}
+
+	public static void timeoutGPS(Context ctxt, Intent i) {
+		Log.d("GPSing", "Timed out");
+
+		getLock(2, ctxt.getApplicationContext()).acquire();
+		i.setClass(ctxt, GPSingService.class); // Not certain I need this anymore
+		ctxt.startService(i);
+	}
 	
 
 	// Returns the requested WakeLock, creating it if necessary
 	synchronized private static PowerManager.WakeLock getLock(int i, Context context) {
 		PowerManager.WakeLock a;
 		if (wakeLock1 == null) {
-			PowerManager mgr = 
-					(PowerManager)context.getApplicationContext()
-					.getSystemService(Context.POWER_SERVICE);
-
+			PowerManager mgr = (PowerManager)context.getApplicationContext().getSystemService(Context.POWER_SERVICE);
 			wakeLock1 = mgr.newWakeLock(
 				PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
 				"lockAccelerometer"
@@ -77,15 +83,24 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			wakeLock1.setReferenceCounted(true);
 		}
 		if (wakeLock2 == null) {
-			PowerManager mgr = 
-					(PowerManager)context.getApplicationContext()
-					.getSystemService(Context.POWER_SERVICE);
-
+			PowerManager mgr = (PowerManager)context.getApplicationContext().getSystemService(Context.POWER_SERVICE);
 			wakeLock2 = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lockGPS");
 			wakeLock2.setReferenceCounted(true);
 		}
-		if (i == 0) return wakeLock1;
-		return wakeLock2;
+		if (wakeLock3 == null) {
+			PowerManager mgr = (PowerManager)context.getApplicationContext().getSystemService(Context.POWER_SERVICE);
+			wakeLock3 = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lockGPSTimeout");
+			wakeLock3.setReferenceCounted(true);
+		}
+		if (i == 0) {
+			return wakeLock1;
+		} else {
+			if (i == 1) {
+				return wakeLock2;
+			} else {
+				return wakeLock3;
+			}
+		}
 	}
      
 	// Update Notification
@@ -186,8 +201,16 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 	// GPS METHODS
 	public void startGPS() {
+		// Set timeout for 60 seconds
+		AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
+		Intent i = new Intent(this, GPSTimeoutReceiver.class);
+		Calendar cal = new GregorianCalendar();
+		PendingIntent pi = PendingIntent.getBroadcast(this, 0, i, 0);
+		cal.add(Calendar.SECOND, 60);
+		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
+
+
 		lGPSTimestamp = System.currentTimeMillis();
-		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 200, 0, this);
 	}
 
@@ -207,11 +230,6 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			currentBestLocation = location;
 		}
 	
-		// Quick and dirty timeout ... will be replaced by AlarmManger-based timeout
-		if (System.currentTimeMillis() - lGPSTimestamp < 60000) {
-			return;
-		}
-		
 		stopGPS();
 				
 		// THINGS I'D LIKE TO LOG
@@ -341,6 +359,8 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	public void onCreate() {
 		super.onCreate();
 		Log.d("GPSing", "Service.onCreate");
+
+		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		
 		// Set the icon, scrolling text and timestamp
 		mNotification = new Notification(R.drawable.stationary, "Stationary", System.currentTimeMillis());
@@ -369,9 +389,25 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Log.d("GPSing", "Service.onStartCommand");
-		// Will this be destroyed?
-		startAccelerometer();
+		Bundle b = intent.getExtras();;
+
+		int a = b.getInt("com.szlosek.gpsing.IntentExtra");
+
+		if (a == 0) { // Start GPSing
+			// Which type of intent have we received?
+			Log.d("GPSing", "Service.onStartCommand=StartGPS");
+			// Will this be destroyed?
+			startAccelerometer();
+
+		} else { // GPS timeout, so stop
+			Log.d("GPSing", "Service.onStartCommand=StopGPS");
+			stopGPS();
+			sleep(30);
+			if (getLock(1, GPSingService.this.getApplicationContext()).isHeld()) {
+				getLock(1, GPSingService.this.getApplicationContext()).release();
+			}
+			getLock(2, GPSingService.this.getApplicationContext()).release();
+		}
 		
 		
 		return START_REDELIVER_INTENT;
