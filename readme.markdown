@@ -14,3 +14,6 @@ Next plans are to:
 * Only store the most accurate locations. Think I can tell the OS to only return fixes with at least a certain level of accuracy.
 * Perhaps: Add a map to the activity and show current location
 
+2012-07-14
+
+GPS timeout is mostly working. Still quirky ... too tired for any more tonight.
