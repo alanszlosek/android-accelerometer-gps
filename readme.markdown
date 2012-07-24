@@ -17,3 +17,7 @@ Next plans are to:
 2012-07-14
 
 GPS timeout is mostly working. Still quirky ... too tired for any more tonight.
+
+2012-07-24
+
+Forgot to store the best location when GPS times out.
