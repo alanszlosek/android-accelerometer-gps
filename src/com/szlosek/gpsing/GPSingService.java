@@ -46,6 +46,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	private LocationManager mLocationManager = null;
 	private Location bestLocation = null;
 	private static final int TWO_MINUTES = 1000 * 60 * 2;
+	private PendingIntent pi;
 
 	// Other
 	private static volatile PowerManager.WakeLock wakeLock1 = null;
@@ -65,7 +66,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	public static void timeoutGPS(Context ctxt, Intent i) {
 		Log.d("GPSing", "Timed out");
 
-		getLock(2, ctxt.getApplicationContext()).acquire();
+		getLock(2, ctxt).acquire();
 		i.setClass(ctxt, GPSingService.class); // Not certain I need this anymore
 		ctxt.startService(i);
 	}
@@ -203,18 +204,22 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	public void startGPS() {
 		// Set timeout for 60 seconds
 		AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
-		Intent i = new Intent(this, GPSTimeoutReceiver.class);
+		Intent i = new Intent(this.getApplicationContext(), GPSTimeoutReceiver.class);
 		Calendar cal = new GregorianCalendar();
-		PendingIntent pi = PendingIntent.getBroadcast(this, 0, i, 0);
+		this.pi = PendingIntent.getBroadcast(this.getApplicationContext(), 0, i, 0);
 		cal.add(Calendar.SECOND, 60);
-		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
-
+		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), this.pi);
 
 		lGPSTimestamp = System.currentTimeMillis();
 		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 200, 0, this);
 	}
 
 	public void stopGPS() {
+		if (this.pi != null) {
+			AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
+			mgr.cancel(this.pi);
+			this.pi = null;
+		}
 		mLocationManager.removeUpdates(this);
 	}
  		
@@ -228,6 +233,14 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		// hope this ends up being a quick calculation
 		if (isBetterLocation(location, currentBestLocation)){
 			currentBestLocation = location;
+		}
+
+		// Try to get 10 meter accuracy?
+		/*
+		Probably should adjust accuracy based on current speed. If we're travelling 1 m/s, our accuracy probably won't get below a meter
+		*/
+		if (location.getAccuracy() > 1.00) {
+			return;
 		}
 	
 		stopGPS();
@@ -341,11 +354,11 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		if (w == 0) {
 			if (iSinceMotion < 3) {
 				Log.d("GPSing", "Waiting 30 seconds");
-				cal.add(Calendar.SECOND, 5);
+				cal.add(Calendar.SECOND, 30);
 			} else {
 
 				Log.d("GPSing", "Waiting 60 seconds");
-				cal.add(Calendar.SECOND, 10);
+				cal.add(Calendar.SECOND, 60);
 			}
 		} else {
 			cal.add(Calendar.SECOND, w);
@@ -389,7 +402,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Bundle b = intent.getExtras();;
+		Bundle b = intent.getExtras();
 
 		int a = b.getInt("com.szlosek.gpsing.IntentExtra");
 
