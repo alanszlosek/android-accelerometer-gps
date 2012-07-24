@@ -224,7 +224,6 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	}
  		
 	public void onLocationChanged(Location location) {
-		ContentValues data;
 		int a = 10;
 
 		Log.d("GPSing", String.format("%f", location.getAccuracy()));
@@ -248,8 +247,16 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		// THINGS I'D LIKE TO LOG
 		// Compared to current millis, how old is this location?
 		// How long does it take to get location
-	
-		
+
+		saveLocation();
+
+		// Don't like this being hardcoded here ... need a better scheme for handling this
+		sleep(30);
+		getLock(1, GPSingService.this.getApplicationContext()).release();
+	}
+
+	protected void saveLocation() {
+		ContentValues data;
 		SQLiteOpenHelper dbHelper = new LocationsOpenHelper(GPSingService.this);
 		SQLiteDatabase db = dbHelper.getWritableDatabase();
 		data = new ContentValues();
@@ -262,9 +269,6 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		data.put("best", 0);
 		db.insert("locations", null, data);
 		db.close();
-		// Don't like this being hardcoded here ... need a better scheme for handling this
-		sleep(30);
-		getLock(1, GPSingService.this.getApplicationContext()).release();
 	}
 
 	public void onStatusChanged(String provider, int status, Bundle extras) {}
@@ -415,6 +419,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		} else { // GPS timeout, so stop
 			Log.d("GPSing", "Service.onStartCommand=StopGPS");
 			stopGPS();
+			saveLocation();
 			sleep(30);
 			if (getLock(1, GPSingService.this.getApplicationContext()).isHeld()) {
 				getLock(1, GPSingService.this.getApplicationContext()).release();
