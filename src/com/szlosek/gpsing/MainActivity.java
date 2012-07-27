@@ -120,11 +120,11 @@ public class MainActivity extends MapActivity {
 		
 		Log.d("GPSing","Activity started");
 		//again();
-		Intent i = new Intent(this, GPSingService.class);
+		Intent i = new Intent(this.getApplicationContext(), GPSingService.class);
 		i.putExtra("com.szlosek.gpsing.IntentExtra", 0);
-		GPSingService.requestLocation(this, i);
+		//GPSingService.requestLocation(this, i);
 
-		bindService(new Intent(MainActivity.this, GPSingService.class), MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
+		bindService(i, MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
 	}
 
 	@Override

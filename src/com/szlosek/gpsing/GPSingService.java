@@ -1,5 +1,6 @@
 package com.szlosek.gpsing;
 
+import java.lang.Math;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -51,7 +52,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	private Location bestLocation = null;
 	private static final int TWO_MINUTES = 1000 * 60 * 2;
 	private PendingIntent pi;
-	//private LocationCircularBuffer locations;
+	private LocationCircularBuffer locations;
 
 	// Other
 	private static volatile PowerManager.WakeLock wakeLock1 = null;
@@ -72,6 +73,8 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		Log.d("GPSing","Alarmed");
 
 		getLock(0, ctxt.getApplicationContext()).acquire();
+
+		i.putExtra("com.szlosek.gpsing.IntentExtra", 0);
 		i.setClass(ctxt, GPSingService.class); // Not certain I need this anymore
 		ctxt.startService(i);
 	}
@@ -230,9 +233,9 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), this.pi);
 
 		lGPSTimestamp = System.currentTimeMillis();
-		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 0, this);
+		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 0, this);
 
-		//locations = new LocationCircularBuffer(3);
+		locations = new LocationCircularBuffer(5);
 	}
 
 	public void stopGPS() {
@@ -266,41 +269,27 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			e.printStackTrace();
 		}
 
-/*
-		locations.add( location );
+		locations.insert( location );
 
-		if (locations.size() < 3) {
+		if (locations.size() < 5) {
 			return;
 		}
 
-		// We have 3, check whether accuracy is getting better at all
-
-		// Calculate standard deviation
-		double avg = (
-		double sd = Math.sqrt(
-			(
-				Math.pow( (a - avg), 2)
-				+
-				Math.pow( (b - avg), 2)
-				+
-				Math.pow( (c - avg), 2)
-			)
-			/
-			3
-		);
-
+		float minAccuracy, maxAccuracy;
+		minAccuracy = 9999;
+		maxAccuracy = 0;
+		for (i = 0; i < 5; i++) {
+			Location l = locations.get(i);
+			minAccuracy = Math.min(minAccuracy, l.getAccuracy());
+			maxAccuracy = Math.max(maxAccuracy, l.getAccuracy());
+		}
 		// If we're under 20 meters of accuracy, and std-dev is less than 3 ... YAY
-*/
-	
-
-		// Try to get 10 meter accuracy?
-		/*
-		Probably should adjust accuracy based on current speed. If we're travelling 1 m/s, our accuracy probably won't get below a meter
-		*/
-		if (location.getAccuracy() > 1.00) {
+		if (maxAccuracy - minAccuracy > 3) {
 			return;
 		}
+
 	
+		Log.d("GPSing", "Not much change in last 3 accuracies");
 		stopGPS();
 				
 		// THINGS I'D LIKE TO LOG
@@ -435,6 +424,33 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
 	}
 
+	private void handleIntent(Intent intent) {
+		Bundle b = intent.getExtras();
+
+		int a = b.getInt("com.szlosek.gpsing.IntentExtra");
+
+		if (a == 0) { // Start GPSing
+			// Which type of intent have we received?
+			Log.d("GPSing", "Service.onStartCommand=StartGPS");
+			// Will this be destroyed?
+			startAccelerometer();
+
+		} else { // GPS timeout, so stop
+			Log.d("GPSing", "Service.onStartCommand=StopGPS");
+			stopGPS();
+			saveLocation();
+			sleep(30);
+			if (getLock(1, GPSingService.this.getApplicationContext()).isHeld()) {
+				getLock(1, GPSingService.this.getApplicationContext()).release();
+			}
+			getLock(2, GPSingService.this.getApplicationContext()).release();
+		}
+		
+		
+	}
+
+
+
 
 	// Message Handler
 	class IncomingHandler extends Handler {
@@ -488,34 +504,16 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Bundle b = intent.getExtras();
-
-		int a = b.getInt("com.szlosek.gpsing.IntentExtra");
-
-		if (a == 0) { // Start GPSing
-			// Which type of intent have we received?
-			Log.d("GPSing", "Service.onStartCommand=StartGPS");
-			// Will this be destroyed?
-			startAccelerometer();
-
-		} else { // GPS timeout, so stop
-			Log.d("GPSing", "Service.onStartCommand=StopGPS");
-			stopGPS();
-			saveLocation();
-			sleep(30);
-			if (getLock(1, GPSingService.this.getApplicationContext()).isHeld()) {
-				getLock(1, GPSingService.this.getApplicationContext()).release();
-			}
-			getLock(2, GPSingService.this.getApplicationContext()).release();
-		}
-		
-		
+		Log.d("GPSing", "Service.onStartCommand");
+		handleIntent(intent);
 		return START_REDELIVER_INTENT;
 	}
 
 	@Override
-	public IBinder onBind(Intent arg0) {
-		Toast.makeText(getApplicationContext(), "binding", Toast.LENGTH_SHORT).show();
+	public IBinder onBind(Intent intent) {
+		Log.d("GPSing", "Service.onBind");
+		getLock(0, getApplicationContext()).acquire();
+		handleIntent(intent);
 		return mServiceMessenger.getBinder();
 		//return null;
 	}
