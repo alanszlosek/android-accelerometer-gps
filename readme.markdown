@@ -21,3 +21,7 @@ GPS timeout is mostly working. Still quirky ... too tired for any more tonight.
 2012-07-24
 
 Forgot to store the best location when GPS times out.
+
+2012-07-26
+
+Preparing to use standard deviation of GPS accuracies as a measure of whether we should stop polling. Thinking that if we're under 20 meters of accuracy, and std-dev is around 3, we probably won't get much better and should stop.
