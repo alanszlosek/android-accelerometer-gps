@@ -25,3 +25,7 @@ Forgot to store the best location when GPS times out.
 2012-07-26
 
 Preparing to use standard deviation of GPS accuracies as a measure of whether we should stop polling. Thinking that if we're under 20 meters of accuracy, and std-dev is around 3, we probably won't get much better and should stop.
+
+2012-07-27
+
+Actually, I think standard deviation is overkill. Should be able to accomplish the same by keeping the last 5 location fixes, and comparing the maximum and minimum accuracy values. If their difference is less than 5 meters, it's unlikely accuracy will greatly improve much more.
