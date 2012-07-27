@@ -32,6 +32,7 @@ public class MainActivity extends MapActivity {
 	MapView mapView = null;
 	MapController mapController = null;
 	MyLocationOverlay me = null;
+	boolean paused = false;
 
 
 	// Messaging
@@ -72,6 +73,10 @@ public class MainActivity extends MapActivity {
 		public void handleMessage(Message msg) {
 			switch (msg.what) {
 				case GPSingService.MSG_LOCATION:
+					// Don't update when paused
+					if (paused == true) {
+						return;
+					}
 					Location l = (Location) msg.obj;
 					Double lo, la;
 					la = new Double(l.getLatitude() * 1E6);
@@ -130,21 +135,22 @@ public class MainActivity extends MapActivity {
 	@Override
 	protected void onResume() {
 		super.onResume();
+		paused = false;
 	}
 
-	// Maps Methos
+	@Override
+	protected void onPause() {
+		super.onPause();
+		paused = true;
+	}
+
+	// Maps Methods
 	@Override
 	protected boolean isRouteDisplayed() {
 		return false;
 	}
 
-	public void updateLocation(Location l) {
-		if (me == null) {
-			return;
-		}
-		me.onLocationChanged(l);
-	}
-
+	// no longer used ...
 	void again() {
 
 		AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);

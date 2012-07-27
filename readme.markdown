@@ -29,3 +29,5 @@ Preparing to use standard deviation of GPS accuracies as a measure of whether we
 2012-07-27
 
 Actually, I think standard deviation is overkill. Should be able to accomplish the same by keeping the last 5 location fixes, and comparing the maximum and minimum accuracy values. If their difference is less than 5 meters, it's unlikely accuracy will greatly improve much more.
+
+And after riding the Portland streetcar, perhaps I should lower the threshold for "significant acceleration". Opened Accelerometer Monitor and it didn't get much above 0.2 (accel vector minus gravity). Maybe 0.3 will be sufficient.

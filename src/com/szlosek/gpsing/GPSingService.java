@@ -179,14 +179,16 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			-
 			9.8
 		);
-		if (accel > 0.6) {
+		// Was 0.6. Lowered to 0.3 to account for smooth motion from Portland Streetcar
+		if (accel > 0.3) {
 			iAccelSignificantReadings++;
 		}
 		
 		Log.d("GPSing", String.format("event: %f %f %f %f %f", x, y, z, accel, 0.600));
 		
 		// Get readings for 1 second
-		if ( (System.currentTimeMillis() - iAccelTimestamp) < 1000) return;
+		// Maybe we should sample for longer given that I've lowered the threshold
+		if ( (System.currentTimeMillis() - iAccelTimestamp) < 2000) return;
 		
 		stopAccelerometer();
 					
@@ -259,17 +261,22 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			currentBestLocation = location;
 		}
 
-
-		Message msg = Message.obtain();
-		msg.what = GPSingService.MSG_LOCATION;
-		msg.obj = currentBestLocation;
-		try {
-			mActivityMessenger.send(msg);
-		} catch (RemoteException e) {
-			e.printStackTrace();
+		if (mActivityMessenger != null) {
+			Message msg = Message.obtain();
+			msg.what = GPSingService.MSG_LOCATION;
+			if (currentBestLocation != null) {
+				msg.obj = currentBestLocation;
+				try {
+					mActivityMessenger.send(msg);
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 
 		locations.insert( location );
+
+		update(GPSingService.this, "Moving", 0);
 
 		if (locations.size() < 5) {
 			return;
@@ -515,7 +522,12 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		getLock(0, getApplicationContext()).acquire();
 		handleIntent(intent);
 		return mServiceMessenger.getBinder();
-		//return null;
+	}
+
+	@Override
+	public boolean onUnbind(Intent intent) {
+		mActivityMessenger = null;
+		return true;
 	}
 
 	@Override
