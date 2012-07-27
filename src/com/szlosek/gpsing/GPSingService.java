@@ -22,8 +22,12 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
 import android.os.PowerManager;
+import android.os.RemoteException;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -47,11 +51,20 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	private Location bestLocation = null;
 	private static final int TWO_MINUTES = 1000 * 60 * 2;
 	private PendingIntent pi;
+	//private LocationCircularBuffer locations;
 
 	// Other
 	private static volatile PowerManager.WakeLock wakeLock1 = null;
 	private static volatile PowerManager.WakeLock wakeLock2 = null;
 	private static volatile PowerManager.WakeLock wakeLock3 = null;
+
+	// Messaging
+	private final Messenger mServiceMessenger = new Messenger(new IncomingHandler());
+	private Messenger mActivityMessenger = null;
+	public static final int MSG_HELLO = 1;
+	public static final int MSG_EXIT = 2;
+	public static final int MSG_LOCATION = 3;
+
 	
 	// Called from GPSingReceiver ...
 	// Acquires a WakeLock, polls Accelerometer, and then may poll GPS
@@ -106,15 +119,21 @@ public class GPSingService extends Service implements SensorEventListener, Locat
      
 	// Update Notification
  	public synchronized void update(Context context, String type, int i) {
+		int accuracy = 9999;
+		if (this.currentBestLocation != null) {
+			Float f = new Float(this.currentBestLocation.getAccuracy());
+			accuracy = f.intValue();
+		}
  		iLocations += i;
  		mNotification.setLatestEventInfo(
  			context,
  			"GPSing",
- 			String.format("%s x%d", type, iLocations),
+ 			String.format("%s x%d to %d meters", type, iLocations, accuracy),
  			mNotification.contentIntent
  		);
+		mNotification.when = System.currentTimeMillis();
  		NotificationManager nm = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
- 			nm.notify(123, mNotification);
+		nm.notify(123, mNotification);
  	}
 
 
@@ -202,16 +221,18 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 	// GPS METHODS
 	public void startGPS() {
-		// Set timeout for 60 seconds
+		// Set timeout for 30 seconds
 		AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
 		Intent i = new Intent(this.getApplicationContext(), GPSTimeoutReceiver.class);
 		Calendar cal = new GregorianCalendar();
 		this.pi = PendingIntent.getBroadcast(this.getApplicationContext(), 0, i, 0);
-		cal.add(Calendar.SECOND, 60);
+		cal.add(Calendar.SECOND, 30);
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), this.pi);
 
 		lGPSTimestamp = System.currentTimeMillis();
-		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 200, 0, this);
+		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 0, this);
+
+		//locations = new LocationCircularBuffer(3);
 	}
 
 	public void stopGPS() {
@@ -225,6 +246,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
  		
 	public void onLocationChanged(Location location) {
 		int a = 10;
+		int i;
 
 		Log.d("GPSing", String.format("%f", location.getAccuracy()));
 
@@ -233,6 +255,43 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		if (isBetterLocation(location, currentBestLocation)){
 			currentBestLocation = location;
 		}
+
+
+		Message msg = Message.obtain();
+		msg.what = GPSingService.MSG_LOCATION;
+		msg.obj = currentBestLocation;
+		try {
+			mActivityMessenger.send(msg);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+
+/*
+		locations.add( location );
+
+		if (locations.size() < 3) {
+			return;
+		}
+
+		// We have 3, check whether accuracy is getting better at all
+
+		// Calculate standard deviation
+		double avg = (
+		double sd = Math.sqrt(
+			(
+				Math.pow( (a - avg), 2)
+				+
+				Math.pow( (b - avg), 2)
+				+
+				Math.pow( (c - avg), 2)
+			)
+			/
+			3
+		);
+
+		// If we're under 20 meters of accuracy, and std-dev is less than 3 ... YAY
+*/
+	
 
 		// Try to get 10 meter accuracy?
 		/*
@@ -251,7 +310,8 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		saveLocation();
 
 		// Don't like this being hardcoded here ... need a better scheme for handling this
-		sleep(30);
+		// Would rather wait a minute between GPS attempts
+		sleep(60);
 		getLock(1, GPSingService.this.getApplicationContext()).release();
 	}
 
@@ -269,6 +329,8 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		data.put("best", 0);
 		db.insert("locations", null, data);
 		db.close();
+
+		//MainActivity.this.updateLocation( this.currentBestLocation );
 	}
 
 	public void onStatusChanged(String provider, int status, Bundle extras) {}
@@ -282,6 +344,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	  * @param currentBestLocation  The current Location fix, to which you want to compare the new one
 	  */
 	protected boolean isBetterLocation(Location location, Location currentBestLocation) {
+
 		if (currentBestLocation == null) {
 			// A new location is always better than no location
 			return true;
@@ -371,6 +434,25 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		PendingIntent pi = PendingIntent.getBroadcast(this, 0, i, 0);
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
 	}
+
+
+	// Message Handler
+	class IncomingHandler extends Handler {
+		@Override
+		public void handleMessage(Message msg) {
+			switch (msg.what) {
+				// Client is sending us it's message handler
+				case GPSingService.MSG_HELLO:
+					mActivityMessenger = msg.replyTo;
+					break;
+				case GPSingService.MSG_EXIT:
+					Toast.makeText(getApplicationContext(), "exit", Toast.LENGTH_SHORT).show();
+					break;
+				default:
+					super.handleMessage(msg);
+			}
+		}
+	}
 	
 	@Override
 	public void onCreate() {
@@ -434,8 +516,8 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	@Override
 	public IBinder onBind(Intent arg0) {
 		Toast.makeText(getApplicationContext(), "binding", Toast.LENGTH_SHORT).show();
-		//return mMessenger.getBinder();
-		return null;
+		return mServiceMessenger.getBinder();
+		//return null;
 	}
 
 	@Override
