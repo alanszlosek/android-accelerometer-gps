@@ -31,3 +31,13 @@ Preparing to use standard deviation of GPS accuracies as a measure of whether we
 Actually, I think standard deviation is overkill. Should be able to accomplish the same by keeping the last 5 location fixes, and comparing the maximum and minimum accuracy values. If their difference is less than 5 meters, it's unlikely accuracy will greatly improve much more.
 
 And after riding the Portland streetcar, perhaps I should lower the threshold for "significant acceleration". Opened Accelerometer Monitor and it didn't get much above 0.2 (accel vector minus gravity). Maybe 0.3 will be sufficient.
+
+2012-07-30
+
+Next I want a toggle button for turning the service on/off. Usefuly for nighttime suspensions, or other long durations when I won't be moving. Not certain whether this should be a toggle above the map, or elsewhere.
+
+2012-08-04
+
+few more ideas:
+
+* If we were moving last time, poll GPS once more to get our stopping location. Otherwise it could be a minute off. Plus, it might just be a fluke that we appear to be stopped.

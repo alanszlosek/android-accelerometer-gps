@@ -1,8 +1,23 @@
-<com.google.android.maps.MapView
-	xmlns:android="http://schemas.android.com/apk/res/android"
-	android:id="@+id/mapview"
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:orientation="vertical"
 	android:layout_width="fill_parent"
-	android:layout_height="fill_parent"
-	android:clickable="true"
-	android:apiKey=""
-	/>
+	android:layout_height="fill_parent">
+
+	<CheckBox
+		android:id="@+id/checkBox1"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="Track Location"
+		/>
+
+	<com.google.android.maps.MapView
+		xmlns:android="http://schemas.android.com/apk/res/android"
+		android:id="@+id/mapview"
+		android:layout_width="fill_parent"
+		android:layout_height="fill_parent"
+		android:clickable="true"
+		android:apiKey="0STMwZtIBV_66_oLSDp3Y760GC1aX3OnR3xO1Bw"
+		/>
+
+</LinearLayout>

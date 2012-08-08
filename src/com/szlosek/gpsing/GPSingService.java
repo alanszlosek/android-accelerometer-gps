@@ -46,11 +46,13 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	private SensorManager mSensorManager;
 
 	// GPS-related
+	private static final int LOCATION_BUFFER = 5;
+	private static final int BETWEEN_GPS = 30;
+	private static final int TWO_MINUTES = 1000 * 60 * 2;
 	private Location currentBestLocation;
 	private long lGPSTimestamp;
 	private LocationManager mLocationManager = null;
 	private Location bestLocation = null;
-	private static final int TWO_MINUTES = 1000 * 60 * 2;
 	private PendingIntent pi;
 	private LocationCircularBuffer locations;
 
@@ -236,8 +238,9 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 		lGPSTimestamp = System.currentTimeMillis();
 		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 0, this);
+		mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 500, 0, this);
 
-		locations = new LocationCircularBuffer(5);
+		locations = new LocationCircularBuffer(GPSingService.LOCATION_BUFFER);
 	}
 
 	public void stopGPS() {
@@ -253,7 +256,13 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		int a = 10;
 		int i;
 
-		Log.d("GPSing", String.format("%f", location.getAccuracy()));
+		Log.d("GPSing", String.format(
+			"lat: %f lon: %f acc: %f provider: %s",
+			location.getLatitude(),
+			location.getLongitude(),
+			location.getAccuracy(),
+			location.getProvider()
+		));
 
 		// Determine whether to discard the location or not ...
 		// hope this ends up being a quick calculation
@@ -278,25 +287,24 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 		update(GPSingService.this, "Moving", 0);
 
-		if (locations.size() < 5) {
+		if (locations.size() < GPSingService.LOCATION_BUFFER) {
 			return;
 		}
 
 		float minAccuracy, maxAccuracy;
 		minAccuracy = 9999;
 		maxAccuracy = 0;
-		for (i = 0; i < 5; i++) {
+		for (i = 0; i < GPSingService.LOCATION_BUFFER; i++) {
 			Location l = locations.get(i);
 			minAccuracy = Math.min(minAccuracy, l.getAccuracy());
 			maxAccuracy = Math.max(maxAccuracy, l.getAccuracy());
 		}
-		// If we're under 20 meters of accuracy, and std-dev is less than 3 ... YAY
 		if (maxAccuracy - minAccuracy > 3) {
 			return;
 		}
 
 	
-		Log.d("GPSing", "Not much change in last 3 accuracies");
+		Log.d("GPSing", String.format("Not much change in last %d accuracies", GPSingService.LOCATION_BUFFER));
 		stopGPS();
 				
 		// THINGS I'D LIKE TO LOG
@@ -307,7 +315,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 		// Don't like this being hardcoded here ... need a better scheme for handling this
 		// Would rather wait a minute between GPS attempts
-		sleep(60);
+		sleep(GPSingService.BETWEEN_GPS);
 		getLock(1, GPSingService.this.getApplicationContext()).release();
 	}
 
@@ -322,6 +330,9 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		data.put("altitude", currentBestLocation.getAltitude());
 		data.put("gpsStart", lGPSTimestamp);
 		data.put("accuracy", currentBestLocation.getAccuracy());
+		data.put("bearing", currentBestLocation.getBearing());
+		data.put("speed", currentBestLocation.getSpeed());
+		data.put("provider", currentBestLocation.getProvider());
 		data.put("best", 0);
 		db.insert("locations", null, data);
 		db.close();
@@ -399,7 +410,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 		@Override
 		public void onCreate(SQLiteDatabase db) {
-			db.execSQL("create table locations (milliseconds integer, latitude real, longitude real, altitude real, gpsStart integer, accuracy real, best integer);");
+			db.execSQL("create table locations (milliseconds integer, latitude real, longitude real, altitude real, gpsStart integer, accuracy real, bearing real, speed real, provider text, best integer);");
 		}
 
 		@Override
@@ -427,8 +438,8 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			cal.add(Calendar.SECOND, w);
 		}
 
-		PendingIntent pi = PendingIntent.getBroadcast(this, 0, i, 0);
-		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
+		this.pi = PendingIntent.getBroadcast(this, 0, i, 0);
+		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), this.pi);
 	}
 
 	private void handleIntent(Intent intent) {
@@ -470,6 +481,14 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 					break;
 				case GPSingService.MSG_EXIT:
 					Toast.makeText(getApplicationContext(), "exit", Toast.LENGTH_SHORT).show();
+					// Cancel all alarms
+					if (GPSingService.this.pi != null) {
+						AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
+						mgr.cancel(GPSingService.this.pi);
+						GPSingService.this.pi = null;
+					}
+					// Might be nice to have a state machine state variable so it's easier to know how to transition out of the current state
+					stopSelf();
 					break;
 				default:
 					super.handleMessage(msg);

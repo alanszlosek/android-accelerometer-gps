@@ -26,6 +26,10 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.CheckBox;
 import android.widget.Toast;
 
 public class MainActivity extends MapActivity {
@@ -33,6 +37,8 @@ public class MainActivity extends MapActivity {
 	MapController mapController = null;
 	MyLocationOverlay me = null;
 	boolean paused = false;
+
+	private CheckBox cb = null;
 
 
 	// Messaging
@@ -107,6 +113,19 @@ public class MainActivity extends MapActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
+		cb = (CheckBox) findViewById(R.id.checkBox1);
+		cb.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				if (((CheckBox) v).isChecked()) {
+					startGPSing();
+
+				} else {
+					stopGPSing();
+				}
+			}
+		});
+
 		mapView = (MapView) findViewById(R.id.mapview);
 		mapView.setBuiltInZoomControls(true);
 		mapController = mapView.getController();
@@ -118,6 +137,18 @@ public class MainActivity extends MapActivity {
 		getMenuInflater().inflate(R.menu.activity_main, menu);
 		return true;
 	}
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// Handle item selection
+		switch (item.getItemId()) {
+			case R.id.menu_exit:
+				stopGPSing();
+				finish();
+				return true;
+			default:
+				return super.onOptionsItemSelected(item);
+		}
+	}
 	
 	@Override
 	protected void onStart() {
@@ -125,11 +156,6 @@ public class MainActivity extends MapActivity {
 		
 		Log.d("GPSing","Activity started");
 		//again();
-		Intent i = new Intent(this.getApplicationContext(), GPSingService.class);
-		i.putExtra("com.szlosek.gpsing.IntentExtra", 0);
-		//GPSingService.requestLocation(this, i);
-
-		bindService(i, MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
 	}
 
 	@Override
@@ -142,6 +168,12 @@ public class MainActivity extends MapActivity {
 	protected void onPause() {
 		super.onPause();
 		paused = true;
+	}
+
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		stopGPSing();
 	}
 
 	// Maps Methods
@@ -162,6 +194,27 @@ public class MainActivity extends MapActivity {
 
 		PendingIntent pi = PendingIntent.getBroadcast(this, 0, i, 0);
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
+	}
+
+
+	private void startGPSing() {
+		Intent i = new Intent(getApplicationContext(), GPSingService.class);
+		i.putExtra("com.szlosek.gpsing.IntentExtra", 0);
+		//GPSingService.requestLocation(this, i);
+		bindService(i, MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
+	}
+
+	private void stopGPSing() {
+		if (mServiceMessenger != null) {
+			Message msg = Message.obtain();
+			msg.what = GPSingService.MSG_EXIT;
+			try {
+				mServiceMessenger.send(msg);
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		}
+		unbindService(mConnection);
 	}
 
 }
