@@ -41,3 +41,11 @@ Next I want a toggle button for turning the service on/off. Usefuly for nighttim
 few more ideas:
 
 * If we were moving last time, poll GPS once more to get our stopping location. Otherwise it could be a minute off. Plus, it might just be a fluke that we appear to be stopped.
+
+2012-08-09
+
+When activity starts, need a way to check whether the service is running so we can show the proper checkbox state. There have been instances where the service is running but checkbox doesn't know about it.
+
+Might like to use speed reported by GPS to determine next poll time. If we're moving fast, might poll as frequently as every 10 seconds, where normally it'd be 30 to 60.
+
+Should do a write-up of what I've learned about GPS and how to get what you want out of it.
