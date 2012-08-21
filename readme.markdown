@@ -49,3 +49,7 @@ When activity starts, need a way to check whether the service is running so we c
 Might like to use speed reported by GPS to determine next poll time. If we're moving fast, might poll as frequently as every 10 seconds, where normally it'd be 30 to 60.
 
 Should do a write-up of what I've learned about GPS and how to get what you want out of it.
+
+2012-08-21
+
+Still have to figure out why the service crashes with 3G goes away. Perhaps something with polling for coarse location. Or maybe the callback about location service changes isn't being handled correctly.
