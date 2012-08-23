@@ -229,21 +229,41 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	// GPS METHODS
 	public void startGPS() {
 		// Set timeout for 30 seconds
-		AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
-		Intent i = new Intent(this.getApplicationContext(), GPSTimeoutReceiver.class);
-		Calendar cal = new GregorianCalendar();
+		AlarmManager mgr = null;
+		Intent i = null;;
+		Calendar cal = null;
+		int iProviders = 0;
+
+		// Make sure at least one provider is available
+		if (mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+			mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 0, this);
+			iProviders++;
+		}
+		if (mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+			mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 500, 0, this);
+			iProviders++;
+		}
+
+		if (iProviders == 0) {
+			Log.d("GPSing", "No providers available");
+			sleep(GPSingService.BETWEEN_GPS);
+			getLock(1, GPSingService.this.getApplicationContext()).release();
+			return;
+		}
+
+		lGPSTimestamp = System.currentTimeMillis();
+		mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
+		cal = new GregorianCalendar();
+		i = new Intent(this.getApplicationContext(), GPSTimeoutReceiver.class);
 		this.pi = PendingIntent.getBroadcast(this.getApplicationContext(), 0, i, 0);
 		cal.add(Calendar.SECOND, 30);
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), this.pi);
-
-		lGPSTimestamp = System.currentTimeMillis();
-		mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 0, this);
-		mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 500, 0, this);
 
 		locations = new LocationCircularBuffer(GPSingService.LOCATION_BUFFER);
 	}
 
 	public void stopGPS() {
+		lGPSTimestamp = 0;
 		if (this.pi != null) {
 			AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
 			mgr.cancel(this.pi);
@@ -252,6 +272,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		mLocationManager.removeUpdates(this);
 	}
  		
+	@Override
 	public void onLocationChanged(Location location) {
 		int a = 10;
 		int i;
@@ -340,11 +361,39 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		//MainActivity.this.updateLocation( this.currentBestLocation );
 	}
 
-	public void onStatusChanged(String provider, int status, Bundle extras) {}
+	@Override
+	public void onStatusChanged(String provider, int status, Bundle extras) {
+		Log.d("GPSing", String.format("onStatusChanged: %s status: %d", provider, status));
+	}
 
-	public void onProviderEnabled(String provider) {}
+	@Override
+	public void onProviderEnabled(String provider) {
+		Log.d("GPSing", String.format("onProviderEnabled: %s", provider));
+		if (lGPSTimestamp == 0) {
+			// Not currently interested
+			return;
+		}
+		// If it's a provider we care about, and we're listening, listen!
+		if (provider == LocationManager.GPS_PROVIDER || provider == LocationManager.NETWORK_PROVIDER) {
+			mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 0, this);
+		}
+	}
 
-	public void onProviderDisabled(String provider) {}
+	@Override
+	public void onProviderDisabled(String provider) {
+		Log.d("GPSing", String.format("onProviderDisabled: %s", provider));
+
+		if (lGPSTimestamp == 0) {
+			// Not currently interested
+			return;
+		}
+		// If it's a provider we care about, and we're listening, listen!
+		if (provider == LocationManager.GPS_PROVIDER && mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+			mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 500, 0, this);
+		} else if (provider == LocationManager.NETWORK_PROVIDER && mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+			mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 0, this);
+		}
+	}
 	
 	/** Determines whether one Location reading is better than the current Location fix
 	  * @param location  The new Location that you want to evaluate

@@ -1,14 +1,16 @@
-package com.szlosek.gpsing;
 
+package com.szlosek.gpsing;
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapController;
 import com.google.android.maps.MapView;
-import com.google.android.maps.MyLocationOverlay;
+import com.google.android.maps.Overlay;
+import com.google.android.maps.OverlayItem;
 
 import java.lang.Thread;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.List;
 
 import android.content.ServiceConnection;
 import android.location.Location;
@@ -19,6 +21,7 @@ import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -35,7 +38,9 @@ import android.widget.Toast;
 public class MainActivity extends MapActivity {
 	MapView mapView = null;
 	MapController mapController = null;
-	MyLocationOverlay me = null;
+	List<Overlay> mapOverlays = null;
+	Drawable drawable = null;
+	GPSingOverlay gpsingOverlay = null;
 	boolean paused = false;
 
 	private CheckBox cb = null;
@@ -91,8 +96,18 @@ public class MainActivity extends MapActivity {
 						la.intValue(),
 						lo.intValue()
 					);
+					/*
 					mapController.setZoom(21);
 					mapController.setCenter(gp);
+					*/
+
+					OverlayItem overlayItem = new OverlayItem(gp, "Hola, Mundo!", "I'm in Mexico City!");
+					gpsingOverlay.clear();
+					gpsingOverlay.addOverlay(overlayItem);
+					mapOverlays.clear();
+					mapOverlays.add(gpsingOverlay);
+					//mapView.postInvalidate();
+
 					break;
 				default:
 					super.handleMessage(msg);
@@ -129,7 +144,13 @@ public class MainActivity extends MapActivity {
 		mapView = (MapView) findViewById(R.id.mapview);
 		mapView.setBuiltInZoomControls(true);
 		mapController = mapView.getController();
-		me = new MyLocationOverlay(this, mapView);
+
+		mapOverlays = mapView.getOverlays();
+		gpsingOverlay = new GPSingOverlay(
+			this.getResources().getDrawable(R.drawable.green_dot_12x20),
+			getApplicationContext()
+		);
+		//mapOverlays.add(gpsingOverlay);
 	}
 
 	@Override
