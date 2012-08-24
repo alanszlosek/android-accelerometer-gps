@@ -55,6 +55,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	private Location bestLocation = null;
 	private PendingIntent pi;
 	private LocationCircularBuffer locations;
+	private boolean cellOnly = false;
 
 	// Other
 	private static volatile PowerManager.WakeLock wakeLock1 = null;
@@ -242,6 +243,9 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		if (mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
 			mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 500, 0, this);
 			iProviders++;
+			if (iProviders == 1) {
+				cellOnly = true;
+			}
 		}
 
 		if (iProviders == 0) {
@@ -308,14 +312,16 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 		update(GPSingService.this, "Moving", 0);
 
-		if (locations.size() < GPSingService.LOCATION_BUFFER) {
+		if (cellOnly == false && locations.size() < GPSingService.LOCATION_BUFFER) {
 			return;
 		}
 
 		float minAccuracy, maxAccuracy;
 		minAccuracy = 9999;
 		maxAccuracy = 0;
-		for (i = 0; i < GPSingService.LOCATION_BUFFER; i++) {
+		// for (i = 0; i < GPSingService.LOCATION_BUFFER; i++) {
+		// size for network only case, if buffer isn't full
+		for (i = 0; i < locations.size(); i++) {
 			Location l = locations.get(i);
 			minAccuracy = Math.min(minAccuracy, l.getAccuracy());
 			maxAccuracy = Math.max(maxAccuracy, l.getAccuracy());

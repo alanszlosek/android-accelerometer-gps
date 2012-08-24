@@ -53,3 +53,7 @@ Should do a write-up of what I've learned about GPS and how to get what you want
 2012-08-21
 
 Still have to figure out why the service crashes with 3G goes away. Perhaps something with polling for coarse location. Or maybe the callback about location service changes isn't being handled correctly.
+
+2012-08-23
+
+If no GPS, make sure cell tower location will work, so need to tweak circular buffer logic.
