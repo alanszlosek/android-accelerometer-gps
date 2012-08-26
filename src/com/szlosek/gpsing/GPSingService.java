@@ -56,6 +56,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	private PendingIntent pi;
 	private LocationCircularBuffer locations;
 	private boolean cellOnly = false;
+	private float lowestAccuracy;
 
 	// Other
 	private static volatile PowerManager.WakeLock wakeLock1 = null;
@@ -256,6 +257,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		}
 
 		lGPSTimestamp = System.currentTimeMillis();
+		lowestAccuracy = 9999;
 		mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
 		cal = new GregorianCalendar();
 		i = new Intent(this.getApplicationContext(), GPSTimeoutReceiver.class);
@@ -280,6 +282,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	public void onLocationChanged(Location location) {
 		int a = 10;
 		int i;
+		float accuracyDiff = 0;
 
 		Log.d("GPSing", String.format(
 			"lat: %f lon: %f acc: %f provider: %s",
@@ -308,30 +311,45 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			}
 		}
 
+
 		locations.insert( location );
 
 		update(GPSingService.this, "Moving", 0);
 
-		if (cellOnly == false && locations.size() < GPSingService.LOCATION_BUFFER) {
-			return;
-		}
 
-		float minAccuracy, maxAccuracy;
-		minAccuracy = 9999;
-		maxAccuracy = 0;
-		// for (i = 0; i < GPSingService.LOCATION_BUFFER; i++) {
-		// size for network only case, if buffer isn't full
-		for (i = 0; i < locations.size(); i++) {
-			Location l = locations.get(i);
-			minAccuracy = Math.min(minAccuracy, l.getAccuracy());
-			maxAccuracy = Math.max(maxAccuracy, l.getAccuracy());
-		}
-		if (maxAccuracy - minAccuracy > 3) {
-			return;
-		}
 
-	
-		Log.d("GPSing", String.format("Not much change in last %d accuracies", GPSingService.LOCATION_BUFFER));
+		// Only care about circular buffer max/min compare if using gps
+		// or maybe only if we have 5
+		if (cellOnly == false) {
+
+			// Can't do much without significant measurement
+			if (locations.size() < GPSingService.LOCATION_BUFFER) {
+				return;
+			}
+
+			/*
+			lowestAccuracy = Math.min(lowestAccuracy, location.getAccuracy() );
+			accuracyDiff = Math.abs( lowestAccuracy - location.getAccuracy() );
+			// Getting worse?
+			accuracyDiff < 5
+			*/
+
+			float minAccuracy, maxAccuracy;
+			minAccuracy = 9999;
+			maxAccuracy = 0;
+			for (i = 0; i < locations.size(); i++) {
+				Location l = locations.get(i);
+				if (l == null) continue;
+				minAccuracy = Math.min(minAccuracy, l.getAccuracy());
+				maxAccuracy = Math.max(maxAccuracy, l.getAccuracy());
+			}
+			if (maxAccuracy - minAccuracy > 3) {
+				return;
+			}
+
+		
+			Log.d("GPSing", String.format("Not much change in last %d accuracies", GPSingService.LOCATION_BUFFER));
+		}
 		stopGPS();
 				
 		// THINGS I'D LIKE TO LOG
@@ -348,6 +366,9 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 	protected void saveLocation() {
 		ContentValues data;
+		if (currentBestLocation == null) {
+			return;
+		}
 		SQLiteOpenHelper dbHelper = new LocationsOpenHelper(GPSingService.this);
 		SQLiteDatabase db = dbHelper.getWritableDatabase();
 		data = new ContentValues();

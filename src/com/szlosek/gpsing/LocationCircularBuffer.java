@@ -35,7 +35,9 @@ public class LocationCircularBuffer {
 			fp = 0;
 		}
 		q[ fp ] = c;
-		qs++;
+		if (qs < qMaxSize) {
+			qs++;
+		}
 	}
 
 	public boolean emptyq() {
@@ -50,7 +52,12 @@ public class LocationCircularBuffer {
 		if (qs == 0) {
 			return null;
 		}
-		return q[ i ];
+		// offset from fp
+		int j = fp + i;
+		if (j >= qMaxSize) {
+			j -= qMaxSize;
+		}
+		return q[ j ];
 	}
 
 	public boolean fullq() {
