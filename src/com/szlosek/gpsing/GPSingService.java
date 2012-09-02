@@ -381,7 +381,6 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		data.put("bearing", currentBestLocation.getBearing());
 		data.put("speed", currentBestLocation.getSpeed());
 		data.put("provider", currentBestLocation.getProvider());
-		data.put("best", 0);
 		db.insert("locations", null, data);
 		db.close();
 
@@ -607,8 +606,10 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Log.d("GPSing", "Service.onStartCommand");
+		MainActivity.serviceRunning = true;
 		handleIntent(intent);
-		return START_REDELIVER_INTENT;
+		//return START_REDELIVER_INTENT;
+		return START_STICKY;
 	}
 
 	@Override
@@ -628,5 +629,6 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	@Override
 	public void onDestroy() {
 		Log.d("GPSing", "Service.onDestroy");
+		MainActivity.serviceRunning = true;
 	}
 }

@@ -43,7 +43,8 @@ public class MainActivity extends MapActivity {
 	GPSingOverlay gpsingOverlay = null;
 	boolean paused = false;
 
-	private CheckBox cb = null;
+	//private CheckBox cb = null;
+	public static boolean serviceRunning = false;
 
 
 	// Messaging
@@ -69,6 +70,12 @@ public class MainActivity extends MapActivity {
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
+
+			// This gets called before service updates our boolean
+			/*
+			CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
+			cb.setChecked( MainActivity.serviceRunning );
+			*/
 		}
 
 		public void onServiceDisconnected(ComponentName className) {
@@ -76,6 +83,9 @@ public class MainActivity extends MapActivity {
 			// unexpectedly disconnected -- that is, its process crashed.
 			mServiceMessenger = null;
 			mBound = false;
+
+			CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
+			cb.setChecked( MainActivity.serviceRunning );
 		}
 	};
 
@@ -128,7 +138,7 @@ public class MainActivity extends MapActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		cb = (CheckBox) findViewById(R.id.checkBox1);
+		CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
 		cb.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
@@ -183,6 +193,9 @@ public class MainActivity extends MapActivity {
 	protected void onResume() {
 		super.onResume();
 		paused = false;
+
+		CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
+		cb.setChecked( MainActivity.serviceRunning );
 	}
 
 	@Override
