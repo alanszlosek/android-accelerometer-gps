@@ -57,3 +57,7 @@ Still have to figure out why the service crashes with 3G goes away. Perhaps some
 2012-08-23
 
 If no GPS, make sure cell tower location will work, so need to tweak circular buffer logic.
+
+2012-09-02
+
+It no longer crashes when 3G goes away, but is quirky in other ways. Such is the life of a long-running service, I guess. Maybe there's a better way.

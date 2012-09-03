@@ -608,8 +608,8 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		Log.d("GPSing", "Service.onStartCommand");
 		MainActivity.serviceRunning = true;
 		handleIntent(intent);
-		//return START_REDELIVER_INTENT;
-		return START_STICKY;
+		return START_REDELIVER_INTENT;
+		//return START_STICKY;
 	}
 
 	@Override
