@@ -10,6 +10,8 @@ Yes! I've been using it since July 2012 and have collected around 4000 GPS fixes
 
 It also works surprisingly well in the car. I experimented with the acceleration vector threshold, and 0.3 seems to be the perfect number, at least for my phone.
 
+The app is very simple, check the screenshot.png above.
+
 How?
 ====
 
