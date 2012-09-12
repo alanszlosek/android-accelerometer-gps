@@ -1,4 +1,4 @@
-Why
+GPSing
 ====
 
 I wanted to track my GPS coordinates in a battery-efficient manner, without having to turn InstaMapper or Geoloqi on and off throughout the day. This app only polls GPS when it detects that you are moving. It also stores coordinates locally (SQLite database) for export (adb pull) later.
