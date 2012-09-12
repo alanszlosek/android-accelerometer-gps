@@ -1,6 +1,29 @@
-Wanted to track my GPS coordinates in a battery-efficient fashion, without having to turn InstaMapper on and off throughout the day as I walk around. InstaMapper works great, but it keeps GPS on consistently. I also wanted to store coordinates locally (SQLite database) instead of relying on uploads to InstaMapper every N minutes.
+Why
+====
 
-This app is an attempt to use the accelerometer (pinging every 30-60 seconds) to detect movement. Only then will the app pull GPS coordinates. So far the battery usage is much, much lower than InstaMapper.
+I wanted to track my GPS coordinates in a battery-efficient manner, without having to turn InstaMapper or Geoloqi on and off throughout the day. This app only polls GPS when it detects that you are moving. It also stores coordinates locally (SQLite database) for export (adb pull) later.
+
+Does It Work?
+====
+
+Yes! I've been using it since July 2012 and have collected around 4000 GPS fixes. However, I do tend to turn it off at night, or when I notice my battery getting low after voice calls. But otherwise, I can start it in the morning and forget about it until I come home.
+
+It also works surprisingly well in the car. I experimented with the acceleration vector threshold, and 0.3 seems to be the perfect number, at least for my phone.
+
+The app is very simple, check the screenshot.png above.
+
+How?
+====
+
+By reading the accelerometer every minute, for 2 seconds. If 30% of the readings during those 2 seconds register an absolute force vector greater than 0.3, we're moving. At which point we poll for GPS, and stop upon one of these conditions:
+
+* GPS has been on for 30 seconds
+* The min and max of the last 5 accuracies are within 3 meters of each other.
+
+Battery drain ultimately depends on how often you're actually moving. The more often it polls for GPS, the bigger drain. But the accelerometer polling goes relatively unnoticed by the system.
+
+Journal
+====
 
 2012-07-06
 
