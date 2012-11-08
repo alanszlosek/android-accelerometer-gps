@@ -262,7 +262,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		cal = new GregorianCalendar();
 		i = new Intent(this.getApplicationContext(), GPSTimeoutReceiver.class);
 		this.pi = PendingIntent.getBroadcast(this.getApplicationContext(), 0, i, 0);
-		cal.add(Calendar.SECOND, 30);
+		cal.add(Calendar.SECOND, MainActivity.prefTimeout);
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), this.pi);
 
 		locations = new LocationCircularBuffer(GPSingService.LOCATION_BUFFER);
@@ -501,14 +501,8 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		Calendar cal = new GregorianCalendar();
 
 		if (w == 0) {
-			if (iSinceMotion < 3) {
-				Log.d("GPSing", "Waiting 30 seconds");
-				cal.add(Calendar.SECOND, 30);
-			} else {
-
-				Log.d("GPSing", "Waiting 60 seconds");
-				cal.add(Calendar.SECOND, 60);
-			}
+			Log.d("GPSing", String.format("Waiting %d seconds", MainActivity.prefInterval));
+			cal.add(Calendar.SECOND, MainActivity.prefInterval);
 		} else {
 			cal.add(Calendar.SECOND, w);
 		}

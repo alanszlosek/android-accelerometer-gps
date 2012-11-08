@@ -21,21 +21,25 @@ import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.Toast;
 
 public class MainActivity extends MapActivity {
+	SharedPreferences sharedPreferences;
 	MapView mapView = null;
 	MapController mapController = null;
 	List<Overlay> mapOverlays = null;
@@ -45,6 +49,9 @@ public class MainActivity extends MapActivity {
 
 	//private CheckBox cb = null;
 	public static boolean serviceRunning = false;
+	
+	public static int prefInterval = 0;
+	public static int prefTimeout = 0;
 
 
 	// Messaging
@@ -137,6 +144,8 @@ public class MainActivity extends MapActivity {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		
+		sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
 		CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
 		cb.setOnClickListener(new OnClickListener() {
@@ -148,6 +157,16 @@ public class MainActivity extends MapActivity {
 				} else {
 					stopGPSing();
 				}
+			}
+		});
+		
+		Button startButton = (Button) findViewById(R.id.settings_button);
+		startButton.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				// start activity
+				Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
+				startActivity(intent);
 			}
 		});
 
@@ -196,6 +215,10 @@ public class MainActivity extends MapActivity {
 
 		CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
 		cb.setChecked( MainActivity.serviceRunning );
+		
+		//  Get latest settings, and update accordingly
+		prefInterval = sharedPreferences.getInt("pref_interval", 60);
+		prefTimeout = sharedPreferences.getInt("pref_timeout", 30);
 	}
 
 	@Override

@@ -1,8 +1,38 @@
 <resources>
+	<string name="app_name">GPSing</string>
+	<string name="menu_settings">Settings</string>
+	<string name="menu_exit">Exit</string>
+	<string name="title_activity_main">GPSing</string>
 
-    <string name="app_name">GPSing</string>
-    <string name="menu_settings">Settings</string>
-    <string name="menu_exit">Exit</string>
-    <string name="title_activity_main">GPSing</string>
-
+	<string name="pref_intervalDefault">60</string>
+	<string-array name="pref_intervalLabels">
+		<item>30 seconds</item>
+		<item>45 seconds</item>
+		<item>60 seconds</item>
+		<item>75 seconds</item>
+		<item>90 seconds</item>
+	</string-array>
+	<string-array name="pref_intervalValues">
+		<item>30</item>
+		<item>45</item>
+		<item>60</item>
+		<item>75</item>
+		<item>90</item>
+	</string-array>
+	
+	<string name="pref_timeoutDefault">30</string>
+	<string-array name="pref_timeoutLabels">
+		<item>30 seconds</item>
+		<item>45 seconds</item>
+		<item>60 seconds</item>
+		<item>75 seconds</item>
+		<item>90 seconds</item>
+	</string-array>
+	<string-array name="pref_timeoutValues">
+		<item>30</item>
+		<item>45</item>
+		<item>60</item>
+		<item>75</item>
+		<item>90</item>
+	</string-array>
 </resources>
