@@ -1,4 +1,3 @@
-
 package com.szlosek.gpsing;
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapActivity;
@@ -30,12 +29,10 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
-import android.widget.CheckBox;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends MapActivity {
@@ -49,6 +46,8 @@ public class MainActivity extends MapActivity {
 
 	//private CheckBox cb = null;
 	public static boolean serviceRunning = false;
+	
+	public static boolean currentState = false; // not running
 	
 	public static int prefInterval = 0;
 	public static int prefTimeout = 0;
@@ -91,8 +90,10 @@ public class MainActivity extends MapActivity {
 			mServiceMessenger = null;
 			mBound = false;
 
+			/*
 			CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
 			cb.setChecked( MainActivity.serviceRunning );
+			*/
 		}
 	};
 
@@ -138,6 +139,30 @@ public class MainActivity extends MapActivity {
 		// This needs to wait for the service to come online
 		//bindService(new Intent(MainActivity.this, GPSingService.class), MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
 	}
+	
+	protected void toggleState(boolean newState) {
+		TextView tv;
+		Log.d("GPSing", String.format("New state: %s", (newState == true ? "on" : "off")));
+		if (currentState == true) {
+			if (newState == false) {
+				Log.d("GPSing", "turning off");
+				// Alarms are active. Service may be running right now
+				// if so, let it finish, then simply skip the call to re-schedule
+				tv = (TextView) findViewById(R.id.statusState);
+				tv.setText("Not tracking");
+				stopGPSing();
+			}
+		} else {
+			if (newState == true) {
+				Log.d("GPSing", "turning on");
+				tv = (TextView) findViewById(R.id.statusState);
+				tv.setText("Tracking");
+				
+				// Schedule an alarm
+				startGPSing(); // will replace this later
+			}
+		}
+	}
 
 	// Activity 
 	@Override
@@ -147,6 +172,7 @@ public class MainActivity extends MapActivity {
 		
 		sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
+		/*
 		CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
 		cb.setOnClickListener(new OnClickListener() {
 			@Override
@@ -159,9 +185,10 @@ public class MainActivity extends MapActivity {
 				}
 			}
 		});
+		*/
 		
-		Button startButton = (Button) findViewById(R.id.settings_button);
-		startButton.setOnClickListener(new OnClickListener() {
+		Button buttonSettings = (Button) findViewById(R.id.settings_button);
+		buttonSettings.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				// start activity
@@ -181,24 +208,6 @@ public class MainActivity extends MapActivity {
 		);
 		//mapOverlays.add(gpsingOverlay);
 	}
-
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		getMenuInflater().inflate(R.menu.activity_main, menu);
-		return true;
-	}
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		// Handle item selection
-		switch (item.getItemId()) {
-			case R.id.menu_exit:
-				stopGPSing();
-				finish();
-				return true;
-			default:
-				return super.onOptionsItemSelected(item);
-		}
-	}
 	
 	@Override
 	protected void onStart() {
@@ -213,12 +222,18 @@ public class MainActivity extends MapActivity {
 		super.onResume();
 		paused = false;
 
+		/*
 		CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
 		cb.setChecked( MainActivity.serviceRunning );
+		*/
 		
 		//  Get latest settings, and update accordingly
-		prefInterval = sharedPreferences.getInt("pref_interval", 60);
-		prefTimeout = sharedPreferences.getInt("pref_timeout", 30);
+		boolean newState = sharedPreferences.getBoolean("pref_onoff", false); // false is off/not-running
+		prefInterval = Integer.parseInt( sharedPreferences.getString("pref_interval", "60") );
+		prefTimeout = Integer.parseInt( sharedPreferences.getString("pref_timeout", "30") );
+		
+		// If we turned off the service, handle that change
+		toggleState( newState );
 	}
 
 	@Override
@@ -255,6 +270,7 @@ public class MainActivity extends MapActivity {
 
 
 	private void startGPSing() {
+		currentState = true;
 		Intent i = new Intent(getApplicationContext(), GPSingService.class);
 		i.putExtra("com.szlosek.gpsing.IntentExtra", 0);
 		//GPSingService.requestLocation(this, i);
@@ -262,6 +278,7 @@ public class MainActivity extends MapActivity {
 	}
 
 	private void stopGPSing() {
+		currentState = false;
 		if (mServiceMessenger != null) {
 			Message msg = Message.obtain();
 			msg.what = GPSingService.MSG_EXIT;

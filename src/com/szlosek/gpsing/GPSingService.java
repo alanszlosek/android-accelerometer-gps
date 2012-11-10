@@ -1,3 +1,9 @@
+/*
+Think I'm going to do away with this as a service. If I want the UI to be more responsive while polling, this should run in another thread. Easiest way to do that is to stop using it as a service. Instead, it'll be instantiated when the broadcast receiver gets triggered, and stored in the MainActivity.
+
+I'm not interested in having a long-running notification, though I may create one whenever the state is RUNNING. If the app gets killed, the alarm may persist and start things up again. Not certain.
+*/
+
 package com.szlosek.gpsing;
 
 import java.lang.Math;
@@ -47,7 +53,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 	// GPS-related
 	private static final int LOCATION_BUFFER = 5;
-	private static final int BETWEEN_GPS = 30;
+	//private static final int BETWEEN_GPS = 30;
 	private static final int TWO_MINUTES = 1000 * 60 * 2;
 	private Location currentBestLocation;
 	private long lGPSTimestamp;
@@ -232,7 +238,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	public void startGPS() {
 		// Set timeout for 30 seconds
 		AlarmManager mgr = null;
-		Intent i = null;;
+		Intent i = null;
 		Calendar cal = null;
 		int iProviders = 0;
 
@@ -251,7 +257,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 		if (iProviders == 0) {
 			Log.d("GPSing", "No providers available");
-			sleep(GPSingService.BETWEEN_GPS);
+			sleep(MainActivity.prefInterval);
 			getLock(1, GPSingService.this.getApplicationContext()).release();
 			return;
 		}
@@ -360,7 +366,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 		// Don't like this being hardcoded here ... need a better scheme for handling this
 		// Would rather wait a minute between GPS attempts
-		sleep(GPSingService.BETWEEN_GPS);
+		sleep(MainActivity.prefInterval);
 		getLock(1, GPSingService.this.getApplicationContext()).release();
 	}
 
@@ -496,6 +502,11 @@ public class GPSingService extends Service implements SensorEventListener, Locat
  	
  	
  	public void sleep(int w) {
+		// Check desired state
+		if (MainActivity.currentState == false) {
+			// Tracking has been turned off
+			return;
+		}
 		AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
 		Intent i = new Intent(this, GPSingReceiver.class);
 		Calendar cal = new GregorianCalendar();

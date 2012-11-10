@@ -9,4 +9,6 @@ public class SettingsActivity extends PreferenceActivity {
 		super.onCreate(savedInstanceState);
 		addPreferencesFromResource(R.layout.settings);
 	}
+	
+	// Is there an onPause ... some other way I can update the MainActivity if this activity goes away
 }
