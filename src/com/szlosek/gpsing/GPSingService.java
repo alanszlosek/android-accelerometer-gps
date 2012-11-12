@@ -80,7 +80,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	// Called from GPSingReceiver ...
 	// Acquires a WakeLock, polls Accelerometer, and then may poll GPS
 	public static void requestLocation(Context ctxt, Intent i) {
-		Log.d("GPSing","Alarmed");
+		Debug("Alarmed");
 
 		getLock(0, ctxt.getApplicationContext()).acquire();
 
@@ -90,7 +90,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	}
 
 	public static void timeoutGPS(Context ctxt, Intent i) {
-		Log.d("GPSing", "Timed out");
+		Debug("Timed out");
 
 		getLock(2, ctxt).acquire();
 		i.setClass(ctxt, GPSingService.class); // Not certain I need this anymore
@@ -194,7 +194,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			iAccelSignificantReadings++;
 		}
 		
-		Log.d("GPSing", String.format("event: %f %f %f %f %f", x, y, z, accel, 0.600));
+		Debug(String.format("event: %f %f %f %f %f", x, y, z, accel, 0.600));
 		
 		// Get readings for 1 second
 		// Maybe we should sample for longer given that I've lowered the threshold
@@ -202,14 +202,14 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		
 		stopAccelerometer();
 					
-		Log.d("GPSing", String.format("readings: %d significant: %d", iAccelReadings, iAccelSignificantReadings));
+		Debug(String.format("readings: %d significant: %d", iAccelReadings, iAccelSignificantReadings));
 
 		// Appeared to be moving 30% of the time?
 		// If the bar is this low, why not report motion at the first significant reading and be done with it?
 		if (((1.0*iAccelSignificantReadings) / iAccelReadings) > 0.30) {
 			iSinceMotion = 0;
 			update(GPSingService.this, "Moving", 1);
-			Log.d("GPSing", "Moving");
+			Debug("Moving");
 			
 			// Get new lock for GPS so we can turn off screen
 			getLock(1, GPSingService.this.getApplicationContext()).acquire();
@@ -221,7 +221,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		} else {
 			iSinceMotion++;
 			update(GPSingService.this, "Stationary", 0);
-			Log.d("GPSing", "Stationary");
+			Debug("Stationary");
 			sleep(0);
 			getLock(0, GPSingService.this.getApplicationContext()).release();
  		}
@@ -256,7 +256,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		}
 
 		if (iProviders == 0) {
-			Log.d("GPSing", "No providers available");
+			Debug("No providers available");
 			sleep(MainActivity.prefInterval);
 			getLock(1, GPSingService.this.getApplicationContext()).release();
 			return;
@@ -290,7 +290,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		int i;
 		float accuracyDiff = 0;
 
-		Log.d("GPSing", String.format(
+		Debug(String.format(
 			"lat: %f lon: %f acc: %f provider: %s",
 			location.getLatitude(),
 			location.getLongitude(),
@@ -354,7 +354,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			}
 
 		
-			Log.d("GPSing", String.format("Not much change in last %d accuracies", GPSingService.LOCATION_BUFFER));
+			Debug(String.format("Not much change in last %d accuracies", GPSingService.LOCATION_BUFFER));
 		}
 		stopGPS();
 				
@@ -395,12 +395,12 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 	@Override
 	public void onStatusChanged(String provider, int status, Bundle extras) {
-		Log.d("GPSing", String.format("onStatusChanged: %s status: %d", provider, status));
+		Debug(String.format("onStatusChanged: %s status: %d", provider, status));
 	}
 
 	@Override
 	public void onProviderEnabled(String provider) {
-		Log.d("GPSing", String.format("onProviderEnabled: %s", provider));
+		Debug(String.format("onProviderEnabled: %s", provider));
 		if (lGPSTimestamp == 0) {
 			// Not currently interested
 			return;
@@ -413,7 +413,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 	@Override
 	public void onProviderDisabled(String provider) {
-		Log.d("GPSing", String.format("onProviderDisabled: %s", provider));
+		Debug(String.format("onProviderDisabled: %s", provider));
 
 		if (lGPSTimestamp == 0) {
 			// Not currently interested
@@ -512,7 +512,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		Calendar cal = new GregorianCalendar();
 
 		if (w == 0) {
-			Log.d("GPSing", String.format("Waiting %d seconds", MainActivity.prefInterval));
+			Debug(String.format("Waiting %d seconds", MainActivity.prefInterval));
 			cal.add(Calendar.SECOND, MainActivity.prefInterval);
 		} else {
 			cal.add(Calendar.SECOND, w);
@@ -529,12 +529,12 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 		if (a == 0) { // Start GPSing
 			// Which type of intent have we received?
-			Log.d("GPSing", "Service.onStartCommand=StartGPS");
+			Debug("Service.onStartCommand=StartGPS");
 			// Will this be destroyed?
 			startAccelerometer();
 
 		} else { // GPS timeout, so stop
-			Log.d("GPSing", "Service.onStartCommand=StopGPS");
+			Debug("Service.onStartCommand=StopGPS");
 			stopGPS();
 			saveLocation();
 			sleep(30);
@@ -579,12 +579,12 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		Log.d("GPSing", "Service.onCreate");
+		Debug("Service.onCreate");
 
 		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		
 		// Set the icon, scrolling text and timestamp
-		mNotification = new Notification(R.drawable.stationary, "Stationary", System.currentTimeMillis());
+		mNotification = new Notification(R.drawable.status, "Stationary", System.currentTimeMillis());
 		// The PendingIntent to launch our activity if the user selects this notification
 		PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
 				new Intent(this, MainActivity.class), 0);
@@ -610,7 +610,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Log.d("GPSing", "Service.onStartCommand");
+		Debug("Service.onStartCommand");
 		MainActivity.serviceRunning = true;
 		handleIntent(intent);
 		return START_REDELIVER_INTENT;
@@ -619,7 +619,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 	@Override
 	public IBinder onBind(Intent intent) {
-		Log.d("GPSing", "Service.onBind");
+		Debug("Service.onBind");
 		getLock(0, getApplicationContext()).acquire();
 		handleIntent(intent);
 		return mServiceMessenger.getBinder();
@@ -633,7 +633,12 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 	@Override
 	public void onDestroy() {
-		Log.d("GPSing", "Service.onDestroy");
+		Debug("Service.onDestroy");
 		MainActivity.serviceRunning = true;
+	}
+
+
+	public static void Debug(String message) {
+		Log.d("GPSingService", message);
 	}
 }

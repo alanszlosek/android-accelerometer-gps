@@ -133,6 +133,10 @@ public class MainActivity extends MapActivity {
 		}
 	}
 
+	public void Debug(String message) {
+		Log.d("GPSing", message);
+	}
+
 
 	// Called by service when it's up, so this activity can bind to it
 	public static void ready() {
@@ -142,10 +146,9 @@ public class MainActivity extends MapActivity {
 	
 	protected void toggleState(boolean newState) {
 		TextView tv;
-		Log.d("GPSing", String.format("New state: %s", (newState == true ? "on" : "off")));
+		Debug(String.format("New state: %s", (newState == true ? "on" : "off")));
 		if (currentState == true) {
 			if (newState == false) {
-				Log.d("GPSing", "turning off");
 				// Alarms are active. Service may be running right now
 				// if so, let it finish, then simply skip the call to re-schedule
 				tv = (TextView) findViewById(R.id.statusState);
@@ -154,7 +157,6 @@ public class MainActivity extends MapActivity {
 			}
 		} else {
 			if (newState == true) {
-				Log.d("GPSing", "turning on");
 				tv = (TextView) findViewById(R.id.statusState);
 				tv.setText("Tracking");
 				
@@ -203,7 +205,7 @@ public class MainActivity extends MapActivity {
 
 		mapOverlays = mapView.getOverlays();
 		gpsingOverlay = new GPSingOverlay(
-			this.getResources().getDrawable(R.drawable.green_dot_12x20),
+			this.getResources().getDrawable(R.drawable.marker),
 			getApplicationContext()
 		);
 		//mapOverlays.add(gpsingOverlay);
@@ -213,7 +215,7 @@ public class MainActivity extends MapActivity {
 	protected void onStart() {
 		super.onStart();
 		
-		Log.d("GPSing","Activity started");
+		Debug("Activity started");
 		//again();
 	}
 
