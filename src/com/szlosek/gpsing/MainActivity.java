@@ -31,7 +31,7 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -189,7 +189,7 @@ public class MainActivity extends MapActivity {
 		});
 		*/
 		
-		Button buttonSettings = (Button) findViewById(R.id.settings_button);
+		ImageButton buttonSettings = (ImageButton) findViewById(R.id.settings_button);
 		buttonSettings.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
