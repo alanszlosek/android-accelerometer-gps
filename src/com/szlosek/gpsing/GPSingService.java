@@ -660,8 +660,10 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			.setContentIntent(contentIntent)
 			.build();
 		*/
+		
+		// don't keep creating this if state hasn't transitioned
 		Notification mNotification = new Notification(
-			(moving ? R.drawable.moving : R.drawable.status),
+			(moving ? R.drawable.moving : R.drawable.stationary),
 			t,
 			System.currentTimeMillis()
 		);
