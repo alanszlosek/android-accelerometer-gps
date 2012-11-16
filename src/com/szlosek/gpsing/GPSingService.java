@@ -43,8 +43,9 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	// Notification-related
 	protected int iNotificationId = 123;
 	protected int iLocations = 0;
-	protected int iSinceMotion = 0;
-	private Notification mNotification;
+	
+	private int iIntervalsStationary = 0;
+	private int iIntervalsMoving = 0;
 
 	// Accelerometer-related
 	private int iAccelReadings, iAccelSignificantReadings;
@@ -129,25 +130,22 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			}
 		}
 	}
-     
+
 	// Update Notification
- 	public synchronized void update(Context context, String type, int i) {
+	public synchronized void update(boolean moving, int i) {
 		int accuracy = 9999;
 		if (this.currentBestLocation != null) {
 			Float f = new Float(this.currentBestLocation.getAccuracy());
 			accuracy = f.intValue();
 		}
- 		iLocations += i;
- 		mNotification.setLatestEventInfo(
- 			context,
- 			"GPSing",
- 			String.format("%s x%d to %d meters", type, iLocations, accuracy),
- 			mNotification.contentIntent
- 		);
-		mNotification.when = System.currentTimeMillis();
- 		NotificationManager nm = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
-		nm.notify(123, mNotification);
- 	}
+		/*
+		iLocations += i;
+		if (moving) {
+		} else {
+		}
+		*/
+		createNotification(moving);
+	}
 
 
 	// ACCELEROMETER METHODS
@@ -201,14 +199,15 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		if ( (System.currentTimeMillis() - iAccelTimestamp) < 2000) return;
 		
 		stopAccelerometer();
-					
+
 		Debug(String.format("readings: %d significant: %d", iAccelReadings, iAccelSignificantReadings));
 
 		// Appeared to be moving 30% of the time?
 		// If the bar is this low, why not report motion at the first significant reading and be done with it?
 		if (((1.0*iAccelSignificantReadings) / iAccelReadings) > 0.30) {
-			iSinceMotion = 0;
-			update(GPSingService.this, "Moving", 1);
+			iIntervalsMoving++;
+			iIntervalsStationary = 0;
+			update(true, 1);
 			Debug("Moving");
 			
 			// Get new lock for GPS so we can turn off screen
@@ -219,8 +218,10 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			startGPS();
 			
 		} else {
-			iSinceMotion++;
-			update(GPSingService.this, "Stationary", 0);
+			iIntervalsMoving = 0;
+			iIntervalsStationary++;
+			
+			update(false, 0);
 			Debug("Stationary");
 			sleep(0);
 			getLock(0, GPSingService.this.getApplicationContext()).release();
@@ -320,7 +321,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 		locations.insert( location );
 
-		update(GPSingService.this, "Moving", 0);
+		update(true, 0);
 
 
 
@@ -583,15 +584,8 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		
-		// Set the icon, scrolling text and timestamp
-		mNotification = new Notification(R.drawable.status, "Stationary", System.currentTimeMillis());
-		// The PendingIntent to launch our activity if the user selects this notification
-		PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-				new Intent(this, MainActivity.class), 0);
-
-		// Set the info for the views that show in the notification panel.
-		mNotification.setLatestEventInfo(this, "GPSing", "Stationary", contentIntent);
-		startForeground(iNotificationId, mNotification);
+		Notification n = createNotification(false);
+		startForeground(iNotificationId, n);
 		
 		/*
 
@@ -640,5 +634,41 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 	public static void Debug(String message) {
 		Log.d("GPSingService", message);
+	}
+	
+	protected Notification createNotification(boolean moving) {
+		Context mContext = getApplicationContext();
+		// The PendingIntent to launch our activity if the user selects this notification
+		PendingIntent contentIntent = PendingIntent.getActivity(
+			this,
+			0,
+			new Intent(this, MainActivity.class),
+			0
+		);
+		String t;
+		if (moving == true) {
+			t = String.format("Moving for %d intervals", iIntervalsMoving);
+		} else {
+			t = String.format("Stationary for %d intervals", iIntervalsStationary);
+		}
+		
+		/*
+		Notification mNotification = new NotificationCompat.Builder(mContext)
+			.setContentTitle( (moving ? "Moving" : "Stationary") )
+			.setContentText(t)
+			.setSmallIcon( (moving ? R.drawable.moving : R.drawable.status) )
+			.setContentIntent(contentIntent)
+			.build();
+		*/
+		Notification mNotification = new Notification(
+			(moving ? R.drawable.moving : R.drawable.status),
+			t,
+			System.currentTimeMillis()
+		);
+		mNotification.setLatestEventInfo(this, "GPSing", t, contentIntent);
+		
+		NotificationManager nm = (NotificationManager) mContext.getSystemService(NOTIFICATION_SERVICE);
+		nm.notify(123, mNotification);
+		return mNotification;
 	}
 }
