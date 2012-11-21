@@ -22,6 +22,11 @@ By reading the accelerometer every minute, for 2 seconds. If 30% of the readings
 
 Battery drain ultimately depends on how often you're actually moving. The more often it polls for GPS, the bigger drain. But the accelerometer polling goes relatively unnoticed by the system.
 
+Thanks
+====
+
+http://www.iconfinder.com/icondetails/15696/128/buried_map_trail_treasure_treasure_map_x_icon
+
 Journal
 ====
 

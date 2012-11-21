@@ -40,12 +40,17 @@ import android.widget.Toast;
 
 
 public class GPSingService extends Service implements SensorEventListener, LocationListener {
-	// Notification-related
+	// NOTIFICATION RELATED
+	// The PendingIntent to launch our activity if the user selects this notification
+	protected PendingIntent mPendingIntent;
 	protected int iNotificationId = 123;
 	protected int iLocations = 0;
-	
-	private int iIntervalsStationary = 0;
-	private int iIntervalsMoving = 0;
+	protected float fSince = 0;
+	protected int iIntervals = 0;
+	protected Notification mNotification;
+
+	// INTERNAL STATE
+	private boolean moving = false;
 
 	// Accelerometer-related
 	private int iAccelReadings, iAccelSignificantReadings;
@@ -131,23 +136,6 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		}
 	}
 
-	// Update Notification
-	public synchronized void update(boolean moving, int i) {
-		int accuracy = 9999;
-		if (this.currentBestLocation != null) {
-			Float f = new Float(this.currentBestLocation.getAccuracy());
-			accuracy = f.intValue();
-		}
-		/*
-		iLocations += i;
-		if (moving) {
-		} else {
-		}
-		*/
-		createNotification(moving);
-	}
-
-
 	// ACCELEROMETER METHODS
 	public void startAccelerometer() {
 		iAccelReadings = 0;
@@ -165,7 +153,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
-		double accel, x, y, z, threshold;
+		double accel, x, y, z;
 		if (event.sensor.getType() != Sensor.TYPE_ACCELEROMETER) {
 			return;
 		}
@@ -174,7 +162,6 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		x = event.values[0];
 		y = event.values[1];
 		z = event.values[2];
-		threshold = 0.6;
 		
 		accel = Math.abs(
 			Math.sqrt(
@@ -205,9 +192,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		// Appeared to be moving 30% of the time?
 		// If the bar is this low, why not report motion at the first significant reading and be done with it?
 		if (((1.0*iAccelSignificantReadings) / iAccelReadings) > 0.30) {
-			iIntervalsMoving++;
-			iIntervalsStationary = 0;
-			update(true, 1);
+			setMoving(true);
 			Debug("Moving");
 			
 			// Get new lock for GPS so we can turn off screen
@@ -218,10 +203,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			startGPS();
 			
 		} else {
-			iIntervalsMoving = 0;
-			iIntervalsStationary++;
-			
-			update(false, 0);
+			setMoving(false);
 			Debug("Stationary");
 			sleep(0);
 			getLock(0, GPSingService.this.getApplicationContext()).release();
@@ -230,10 +212,9 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 	@Override
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
-		// can be safely ignored for this demo
+		// can be safely ignored
 	}
- 		
-  	
+
 
 	// GPS METHODS
 	public void startGPS() {
@@ -320,9 +301,6 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 
 
 		locations.insert( location );
-
-		update(true, 0);
-
 
 
 		// Only care about circular buffer max/min compare if using gps
@@ -581,11 +559,18 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	public void onCreate() {
 		super.onCreate();
 		Debug("Service.onCreate");
+		
+		mPendingIntent = PendingIntent.getActivity(
+			this,
+			0,
+			new Intent(this, MainActivity.class),
+			0
+		);
 
 		mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		
-		Notification n = createNotification(false);
-		startForeground(iNotificationId, n);
+		setMoving(false);
+		startForeground(iNotificationId, mNotification);
 		
 		/*
 
@@ -636,41 +621,68 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		Log.d("GPSingService", message);
 	}
 	
-	protected Notification createNotification(boolean moving) {
-		Context mContext = getApplicationContext();
-		// The PendingIntent to launch our activity if the user selects this notification
-		PendingIntent contentIntent = PendingIntent.getActivity(
-			this,
-			0,
-			new Intent(this, MainActivity.class),
-			0
-		);
-		String t;
-		if (moving == true) {
-			t = String.format("Moving for %d intervals", iIntervalsMoving);
+	protected void setMoving(boolean newState) {
+		Context mContext;
+		String s;
+		NotificationManager nm;
+		
+		// Reset counts
+		if (moving == newState) {
+			iIntervals++;
 		} else {
-			t = String.format("Stationary for %d intervals", iIntervalsStationary);
+			// New state. Reset intervals
+			iIntervals = 0;
+			fSince = System.currentTimeMillis();
 		}
 		
+		// Prepare new Notification string
+		if (newState == true) {
+			s = String.format("Moving for %d intervals", iIntervals);
+		} else {
+			s = String.format("Stationary for %d intervals", iIntervals);
+		}
+		
+		// UPDATE NOTIFICATION
+		if (moving == newState) { // Update existing notification
+			mNotification.setLatestEventInfo(this, "GPSing", s, mPendingIntent);
+		
+		} else { // New notification
+			mContext = getApplicationContext();
+
+			/*
+			Notification mNotification = new NotificationCompat.Builder(mContext)
+				.setContentTitle( (moving ? "Moving" : "Stationary") )
+				.setContentText(t)
+				.setSmallIcon( (moving ? R.drawable.moving : R.drawable.status) )
+				.setContentIntent(contentIntent)
+				.build();
+			*/
+		
+			// don't keep creating this if state hasn't transitioned
+			mNotification = new Notification(
+				(moving ? R.drawable.moving : R.drawable.stationary),
+				s,
+				System.currentTimeMillis()
+			);
+			mNotification.setLatestEventInfo(this, "GPSing", s, mPendingIntent);
+		
+			nm = (NotificationManager) mContext.getSystemService(NOTIFICATION_SERVICE);
+			nm.notify(123, mNotification);
+		}
+		
+		
+		// TELL UI TO UPDATE
+		
+		moving = newState;
+		
 		/*
-		Notification mNotification = new NotificationCompat.Builder(mContext)
-			.setContentTitle( (moving ? "Moving" : "Stationary") )
-			.setContentText(t)
-			.setSmallIcon( (moving ? R.drawable.moving : R.drawable.status) )
-			.setContentIntent(contentIntent)
-			.build();
+		int accuracy = 9999;
+		if (this.currentBestLocation != null) {
+			Float f = new Float(this.currentBestLocation.getAccuracy());
+			accuracy = f.intValue();
+		}
 		*/
 		
-		// don't keep creating this if state hasn't transitioned
-		Notification mNotification = new Notification(
-			(moving ? R.drawable.moving : R.drawable.stationary),
-			t,
-			System.currentTimeMillis()
-		);
-		mNotification.setLatestEventInfo(this, "GPSing", t, contentIntent);
-		
-		NotificationManager nm = (NotificationManager) mContext.getSystemService(NOTIFICATION_SERVICE);
-		nm.notify(123, mNotification);
-		return mNotification;
 	}
+	
 }
