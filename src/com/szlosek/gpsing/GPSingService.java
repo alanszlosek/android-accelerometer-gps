@@ -286,20 +286,6 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			currentBestLocation = location;
 		}
 
-		if (mActivityMessenger != null) {
-			Message msg = Message.obtain();
-			msg.what = GPSingService.MSG_LOCATION;
-			if (currentBestLocation != null) {
-				msg.obj = currentBestLocation;
-				try {
-					mActivityMessenger.send(msg);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-
-
 		locations.insert( location );
 
 
@@ -336,7 +322,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			Debug(String.format("Not much change in last %d accuracies", GPSingService.LOCATION_BUFFER));
 		}
 		stopGPS();
-				
+
 		// THINGS I'D LIKE TO LOG
 		// Compared to current millis, how old is this location?
 		// How long does it take to get location
@@ -370,6 +356,17 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		db.close();
 
 		//MainActivity.this.updateLocation( this.currentBestLocation );
+		
+		if (mActivityMessenger != null) {
+			Message msg = Message.obtain();
+			msg.what = GPSingService.MSG_LOCATION;
+			msg.obj = currentBestLocation;
+			try {
+				mActivityMessenger.send(msg);
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	@Override
@@ -623,7 +620,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	
 	protected void setMoving(boolean newState) {
 		Context mContext;
-		String s;
+		String s, fuzzy;
 		NotificationManager nm;
 		
 		// Reset counts
@@ -636,19 +633,22 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		}
 		
 		// Prepare new Notification string
+		/*
 		if (newState == true) {
-			s = String.format("Moving for %d intervals", iIntervals);
+			s = String.format("On the move");
 		} else {
-			s = String.format("Stationary for %d intervals", iIntervals);
+			s = String.format("Sitting still");
 		}
+		*/
+		
+		// Could detect long periods of motion here and give a badge or say something funny
 		
 		// UPDATE NOTIFICATION
-		if (moving == newState) { // Update existing notification
-			mNotification.setLatestEventInfo(this, "GPSing", s, mPendingIntent);
+		if (mNotification != null && moving == newState) { // Update existing notification
+			// No update
+			// mNotification.setLatestEventInfo(this, "GPSing", s, mPendingIntent);
 		
 		} else { // New notification
-			mContext = getApplicationContext();
-
 			/*
 			Notification mNotification = new NotificationCompat.Builder(mContext)
 				.setContentTitle( (moving ? "Moving" : "Stationary") )
@@ -657,18 +657,24 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 				.setContentIntent(contentIntent)
 				.build();
 			*/
+			if (newState == true) {
+				s = String.format("On the move");
+			} else {
+				s = String.format("Sitting duck");
+			}
 		
 			// don't keep creating this if state hasn't transitioned
 			mNotification = new Notification(
-				(moving ? R.drawable.moving : R.drawable.stationary),
+				(newState ? R.drawable.moving : R.drawable.stationary),
 				s,
 				System.currentTimeMillis()
 			);
 			mNotification.setLatestEventInfo(this, "GPSing", s, mPendingIntent);
-		
-			nm = (NotificationManager) mContext.getSystemService(NOTIFICATION_SERVICE);
-			nm.notify(123, mNotification);
 		}
+		
+		mContext = getApplicationContext();
+		nm = (NotificationManager) mContext.getSystemService(NOTIFICATION_SERVICE);
+		nm.notify(123, mNotification);
 		
 		
 		// TELL UI TO UPDATE

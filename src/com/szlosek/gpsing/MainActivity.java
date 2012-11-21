@@ -44,9 +44,8 @@ public class MainActivity extends MapActivity {
 	Drawable drawable = null;
 	GPSingOverlay gpsingOverlay = null;
 	boolean paused = false;
-
-	//private CheckBox cb = null;
-	public static boolean serviceRunning = false;
+	
+	private CircularBuffer mRecentLocations;
 	
 	public static boolean currentState = false; // not running
 	
@@ -77,12 +76,6 @@ public class MainActivity extends MapActivity {
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
-
-			// This gets called before service updates our boolean
-			/*
-			CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
-			cb.setChecked( MainActivity.serviceRunning );
-			*/
 		}
 
 		public void onServiceDisconnected(ComponentName className) {
@@ -90,11 +83,6 @@ public class MainActivity extends MapActivity {
 			// unexpectedly disconnected -- that is, its process crashed.
 			mServiceMessenger = null;
 			mBound = false;
-
-			/*
-			CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
-			cb.setChecked( MainActivity.serviceRunning );
-			*/
 		}
 	};
 
@@ -115,6 +103,11 @@ public class MainActivity extends MapActivity {
 						la.intValue(),
 						lo.intValue()
 					);
+					
+					//mRecentLocations.insert(gp);
+					
+					// Redraw these GeoPoints on the map, with path lines, and pretty colors
+					
 					/*
 					mapController.setZoom(21);
 					mapController.setCenter(gp);
@@ -211,6 +204,8 @@ public class MainActivity extends MapActivity {
 			getApplicationContext()
 		);
 		//mapOverlays.add(gpsingOverlay);
+		
+		mRecentLocations = new CircularBuffer(10);
 	}
 	
 	@Override
@@ -256,20 +251,6 @@ public class MainActivity extends MapActivity {
 	@Override
 	protected boolean isRouteDisplayed() {
 		return false;
-	}
-
-	// no longer used ...
-	void again() {
-
-		AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
-
-		Intent i = new Intent(this, GPSingReceiver.class);
-
-		Calendar cal = new GregorianCalendar();
-		cal.add(Calendar.SECOND, 1);
-
-		PendingIntent pi = PendingIntent.getBroadcast(this, 0, i, 0);
-		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), pi);
 	}
 
 
