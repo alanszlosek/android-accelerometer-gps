@@ -1,4 +1,4 @@
-package com.szlosek.gpsing;
+package com.szlosek.whenmoving;
 import android.location.Location;
 
 

@@ -1,4 +1,4 @@
-package com.szlosek.gpsing;
+package com.szlosek.whenmoving;
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapController;
@@ -42,7 +42,7 @@ public class MainActivity extends MapActivity {
 	MapController mapController = null;
 	List<Overlay> mapOverlays = null;
 	Drawable drawable = null;
-	GPSingOverlay gpsingOverlay = null;
+	MainOverlay gpsingOverlay = null;
 	boolean paused = false;
 	
 	private CircularBuffer mRecentLocations;
@@ -69,7 +69,7 @@ public class MainActivity extends MapActivity {
 			mBound = true;
 
 			Message msg = Message.obtain();
-			msg.what = GPSingService.MSG_HELLO;
+			msg.what = MainService.MSG_HELLO;
 			msg.replyTo = mActivityMessenger;
 			try {
 				mServiceMessenger.send(msg);
@@ -90,7 +90,7 @@ public class MainActivity extends MapActivity {
 	class IncomingHandler extends Handler {
 		public void handleMessage(Message msg) {
 			switch (msg.what) {
-				case GPSingService.MSG_LOCATION:
+				case MainService.MSG_LOCATION:
 					// Don't update when paused
 					if (paused == true) {
 						return;
@@ -128,14 +128,14 @@ public class MainActivity extends MapActivity {
 	}
 
 	public void Debug(String message) {
-		Log.d("GPSing", message);
+		Log.d("WhenMoving", message);
 	}
 
 
 	// Called by service when it's up, so this activity can bind to it
 	public static void ready() {
 		// This needs to wait for the service to come online
-		//bindService(new Intent(MainActivity.this, GPSingService.class), MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
+		//bindService(new Intent(MainActivity.this, MainService.class), MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
 	}
 	
 	protected void toggleState(boolean newState) {
@@ -199,7 +199,7 @@ public class MainActivity extends MapActivity {
 		mapController = mapView.getController();
 
 		mapOverlays = mapView.getOverlays();
-		gpsingOverlay = new GPSingOverlay(
+		gpsingOverlay = new MainOverlay(
 			this.getResources().getDrawable(R.drawable.marker),
 			getApplicationContext()
 		);
@@ -256,9 +256,9 @@ public class MainActivity extends MapActivity {
 
 	private void startGPSing() {
 		currentState = true;
-		Intent i = new Intent(getApplicationContext(), GPSingService.class);
-		i.putExtra("com.szlosek.gpsing.IntentExtra", 0);
-		//GPSingService.requestLocation(this, i);
+		Intent i = new Intent(getApplicationContext(), MainService.class);
+		i.putExtra("com.szlosek.whenmoving.IntentExtra", 0);
+		//MainService.requestLocation(this, i);
 		bindService(i, MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
 	}
 
@@ -266,7 +266,7 @@ public class MainActivity extends MapActivity {
 		currentState = false;
 		if (mServiceMessenger != null) {
 			Message msg = Message.obtain();
-			msg.what = GPSingService.MSG_EXIT;
+			msg.what = MainService.MSG_EXIT;
 			try {
 				mServiceMessenger.send(msg);
 			} catch (RemoteException e) {

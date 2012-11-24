@@ -1,4 +1,4 @@
-package com.szlosek.gpsing;
+package com.szlosek.whenmoving;
 
 
 // From: http://www.cs.utsa.edu/~wagner/CS2213/queue/queue.html

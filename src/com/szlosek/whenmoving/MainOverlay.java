@@ -1,4 +1,4 @@
-package com.szlosek.gpsing;
+package com.szlosek.whenmoving;
 
 import com.google.android.maps.ItemizedOverlay;
 import com.google.android.maps.Overlay;
@@ -11,15 +11,15 @@ import android.content.Context;
 import android.graphics.drawable.Drawable;
 
 
-public class GPSingOverlay extends ItemizedOverlay {
+public class MainOverlay extends ItemizedOverlay {
 	private ArrayList<OverlayItem> mOverlays = new ArrayList<OverlayItem>();
 	Context mContext;
 
-	public GPSingOverlay(Drawable defaultMarker) {
+	public MainOverlay(Drawable defaultMarker) {
 		super(boundCenterBottom(defaultMarker));
 	}
 
-	public GPSingOverlay(Drawable defaultMarker, Context context) {
+	public MainOverlay(Drawable defaultMarker, Context context) {
 		super(boundCenterBottom(defaultMarker));
 		mContext = context;
 	}

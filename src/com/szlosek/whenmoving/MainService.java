@@ -4,7 +4,7 @@ Think I'm going to do away with this as a service. If I want the UI to be more r
 I'm not interested in having a long-running notification, though I may create one whenever the state is RUNNING. If the app gets killed, the alarm may persist and start things up again. Not certain.
 */
 
-package com.szlosek.gpsing;
+package com.szlosek.whenmoving;
 
 import java.lang.Math;
 import java.util.ArrayList;
@@ -39,7 +39,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 
-public class GPSingService extends Service implements SensorEventListener, LocationListener {
+public class MainService extends Service implements SensorEventListener, LocationListener {
 	// NOTIFICATION RELATED
 	// The PendingIntent to launch our activity if the user selects this notification
 	protected PendingIntent mPendingIntent;
@@ -83,15 +83,15 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	public static final int MSG_LOCATION = 3;
 
 	
-	// Called from GPSingReceiver ...
+	// Called from MainReceiver ...
 	// Acquires a WakeLock, polls Accelerometer, and then may poll GPS
 	public static void requestLocation(Context ctxt, Intent i) {
 		Debug("Alarmed");
 
 		getLock(0, ctxt.getApplicationContext()).acquire();
 
-		i.putExtra("com.szlosek.gpsing.IntentExtra", 0);
-		i.setClass(ctxt, GPSingService.class); // Not certain I need this anymore
+		i.putExtra("com.szlosek.whenmoving.IntentExtra", 0);
+		i.setClass(ctxt, MainService.class); // Not certain I need this anymore
 		ctxt.startService(i);
 	}
 
@@ -99,7 +99,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		Debug("Timed out");
 
 		getLock(2, ctxt).acquire();
-		i.setClass(ctxt, GPSingService.class); // Not certain I need this anymore
+		i.setClass(ctxt, MainService.class); // Not certain I need this anymore
 		ctxt.startService(i);
 	}
 	
@@ -196,8 +196,8 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			Debug("Moving");
 			
 			// Get new lock for GPS so we can turn off screen
-			getLock(1, GPSingService.this.getApplicationContext()).acquire();
-			getLock(0, GPSingService.this.getApplicationContext()).release();
+			getLock(1, MainService.this.getApplicationContext()).acquire();
+			getLock(0, MainService.this.getApplicationContext()).release();
 			
 			// Start GPS
 			startGPS();
@@ -206,7 +206,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			setMoving(false);
 			Debug("Stationary");
 			sleep(0);
-			getLock(0, GPSingService.this.getApplicationContext()).release();
+			getLock(0, MainService.this.getApplicationContext()).release();
  		}
 	}
 
@@ -240,7 +240,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		if (iProviders == 0) {
 			Debug("No providers available");
 			sleep(MainActivity.prefInterval);
-			getLock(1, GPSingService.this.getApplicationContext()).release();
+			getLock(1, MainService.this.getApplicationContext()).release();
 			return;
 		}
 
@@ -248,12 +248,12 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		lowestAccuracy = 9999;
 		mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
 		cal = new GregorianCalendar();
-		i = new Intent(this.getApplicationContext(), GPSTimeoutReceiver.class);
+		i = new Intent(this.getApplicationContext(), TimeoutReceiver.class);
 		this.pi = PendingIntent.getBroadcast(this.getApplicationContext(), 0, i, 0);
 		cal.add(Calendar.SECOND, MainActivity.prefTimeout);
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), this.pi);
 
-		locations = new LocationCircularBuffer(GPSingService.LOCATION_BUFFER);
+		locations = new LocationCircularBuffer(MainService.LOCATION_BUFFER);
 	}
 
 	public void stopGPS() {
@@ -294,7 +294,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		if (cellOnly == false) {
 
 			// Can't do much without significant measurement
-			if (locations.size() < GPSingService.LOCATION_BUFFER) {
+			if (locations.size() < MainService.LOCATION_BUFFER) {
 				return;
 			}
 
@@ -319,7 +319,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			}
 
 		
-			Debug(String.format("Not much change in last %d accuracies", GPSingService.LOCATION_BUFFER));
+			Debug(String.format("Not much change in last %d accuracies", MainService.LOCATION_BUFFER));
 		}
 		stopGPS();
 
@@ -332,7 +332,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		// Don't like this being hardcoded here ... need a better scheme for handling this
 		// Would rather wait a minute between GPS attempts
 		sleep(MainActivity.prefInterval);
-		getLock(1, GPSingService.this.getApplicationContext()).release();
+		getLock(1, MainService.this.getApplicationContext()).release();
 	}
 
 	protected void saveLocation() {
@@ -340,7 +340,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		if (currentBestLocation == null) {
 			return;
 		}
-		SQLiteOpenHelper dbHelper = new LocationsOpenHelper(GPSingService.this);
+		SQLiteOpenHelper dbHelper = new LocationsOpenHelper(MainService.this);
 		SQLiteDatabase db = dbHelper.getWritableDatabase();
 		data = new ContentValues();
 		data.put("milliseconds", currentBestLocation.getTime());
@@ -359,7 +359,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		
 		if (mActivityMessenger != null) {
 			Message msg = Message.obtain();
-			msg.what = GPSingService.MSG_LOCATION;
+			msg.what = MainService.MSG_LOCATION;
 			msg.obj = currentBestLocation;
 			try {
 				mActivityMessenger.send(msg);
@@ -484,7 +484,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			return;
 		}
 		AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
-		Intent i = new Intent(this, GPSingReceiver.class);
+		Intent i = new Intent(this, MainReceiver.class);
 		Calendar cal = new GregorianCalendar();
 
 		if (w == 0) {
@@ -501,9 +501,9 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	private void handleIntent(Intent intent) {
 		Bundle b = intent.getExtras();
 
-		int a = b.getInt("com.szlosek.gpsing.IntentExtra");
+		int a = b.getInt("com.szlosek.whenmoving.IntentExtra");
 
-		if (a == 0) { // Start GPSing
+		if (a == 0) { // Start service 
 			// Which type of intent have we received?
 			Debug("Service.onStartCommand=StartGPS");
 			// Will this be destroyed?
@@ -514,10 +514,10 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 			stopGPS();
 			saveLocation();
 			sleep(30);
-			if (getLock(1, GPSingService.this.getApplicationContext()).isHeld()) {
-				getLock(1, GPSingService.this.getApplicationContext()).release();
+			if (getLock(1, MainService.this.getApplicationContext()).isHeld()) {
+				getLock(1, MainService.this.getApplicationContext()).release();
 			}
-			getLock(2, GPSingService.this.getApplicationContext()).release();
+			getLock(2, MainService.this.getApplicationContext()).release();
 		}
 		
 		
@@ -532,16 +532,16 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		public void handleMessage(Message msg) {
 			switch (msg.what) {
 				// Client is sending us it's message handler
-				case GPSingService.MSG_HELLO:
+				case MainService.MSG_HELLO:
 					mActivityMessenger = msg.replyTo;
 					break;
-				case GPSingService.MSG_EXIT:
+				case MainService.MSG_EXIT:
 					Toast.makeText(getApplicationContext(), "exit", Toast.LENGTH_SHORT).show();
 					// Cancel all alarms
-					if (GPSingService.this.pi != null) {
+					if (MainService.this.pi != null) {
 						AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
-						mgr.cancel(GPSingService.this.pi);
-						GPSingService.this.pi = null;
+						mgr.cancel(MainService.this.pi);
+						MainService.this.pi = null;
 					}
 					// Might be nice to have a state machine state variable so it's easier to know how to transition out of the current state
 					stopSelf();
@@ -587,7 +587,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Debug("Service.onStartCommand");
-		MainActivity.serviceRunning = true;
+		//MainActivity.serviceRunning = true;
 		handleIntent(intent);
 		return START_REDELIVER_INTENT;
 		//return START_STICKY;
@@ -610,12 +610,12 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 	@Override
 	public void onDestroy() {
 		Debug("Service.onDestroy");
-		MainActivity.serviceRunning = true;
+		//MainActivity.serviceRunning = true;
 	}
 
 
 	public static void Debug(String message) {
-		Log.d("GPSingService", message);
+		Log.d("WhenMoving.Service", message);
 	}
 	
 	protected void setMoving(boolean newState) {
@@ -646,7 +646,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 		// UPDATE NOTIFICATION
 		if (mNotification != null && moving == newState) { // Update existing notification
 			// No update
-			// mNotification.setLatestEventInfo(this, "GPSing", s, mPendingIntent);
+			// mNotification.setLatestEventInfo(this, "WhenMoving.Service", s, mPendingIntent);
 		
 		} else { // New notification
 			/*
@@ -669,7 +669,7 @@ public class GPSingService extends Service implements SensorEventListener, Locat
 				s,
 				System.currentTimeMillis()
 			);
-			mNotification.setLatestEventInfo(this, "GPSing", s, mPendingIntent);
+			mNotification.setLatestEventInfo(this, "When Moving", s, mPendingIntent);
 		}
 		
 		mContext = getApplicationContext();

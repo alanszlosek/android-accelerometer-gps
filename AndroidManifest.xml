@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-	package="com.szlosek.gpsing"
+	package="com.szlosek.whenmoving"
 	android:versionCode="1"
 	android:versionName="1.0" >
 
@@ -33,9 +33,9 @@
 			</intent-filter>
 		</activity>
 
-		<receiver android:name="com.szlosek.gpsing.GPSingReceiver" />
-		<receiver android:name="com.szlosek.gpsing.GPSTimeoutReceiver" />
-		<service android:name="com.szlosek.gpsing.GPSingService" />
+		<receiver android:name="com.szlosek.whenmoving.MainReceiver" />
+		<receiver android:name="com.szlosek.whenmoving.TimeoutReceiver" />
+		<service android:name="com.szlosek.whenmoving.MainService" />
 	</application>
 
 </manifest>
