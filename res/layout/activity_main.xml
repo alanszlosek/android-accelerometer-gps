@@ -4,51 +4,6 @@
 	android:layout_width="fill_parent"
 	android:layout_height="fill_parent">
 
-	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-		android:orientation="horizontal"
-		android:layout_width="fill_parent"
-		android:layout_height="60dp">
-		
-		<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-			android:orientation="vertical"
-			android:layout_width="fill_parent"
-			android:layout_height="fill_parent"
-			android:layout_weight="1">
-			<TextView
-				android:id="@+id/statusMotion"
-				android:layout_width="fill_parent"
-				android:layout_height="wrap_content"
-				android:text="Stationary"
-				android:textSize="20sp"
-				/>
-			<TextView
-				android:id="@+id/statusState"
-				android:layout_width="fill_parent"
-				android:layout_height="wrap_content"
-				android:text="Not tracking"
-				/>
-			<TextView
-				android:id="@+id/statusPosition"
-				android:layout_width="fill_parent"
-				android:layout_height="wrap_content"
-				android:text=""
-				/>
-		</LinearLayout>
-		
-		<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-			android:orientation="vertical"
-			android:layout_width="fill_parent"
-			android:layout_height="fill_parent"
-			android:layout_weight="1">
-			<ImageButton android:id="@+id/settings_button"
-				android:layout_width="48dp"
-				android:layout_height="wrap_content"
-				android:layout_gravity="right"
-				android:src="@drawable/settings"
-				/>
-		</LinearLayout>
-	</LinearLayout>
-
 	<com.google.android.maps.MapView
 		xmlns:android="http://schemas.android.com/apk/res/android"
 		android:id="@+id/mapview"

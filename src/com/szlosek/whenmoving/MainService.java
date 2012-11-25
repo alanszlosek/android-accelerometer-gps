@@ -61,7 +61,7 @@ public class MainService extends Service implements SensorEventListener, Locatio
 	private static final int LOCATION_BUFFER = 5;
 	//private static final int BETWEEN_GPS = 30;
 	private static final int TWO_MINUTES = 1000 * 60 * 2;
-	private Location currentBestLocation;
+	public static Location currentBestLocation;
 	private long lGPSTimestamp;
 	private LocationManager mLocationManager = null;
 	private Location bestLocation = null;
@@ -282,8 +282,8 @@ public class MainService extends Service implements SensorEventListener, Locatio
 
 		// Determine whether to discard the location or not ...
 		// hope this ends up being a quick calculation
-		if (isBetterLocation(location, currentBestLocation)){
-			currentBestLocation = location;
+		if (isBetterLocation(location, MainService.currentBestLocation)){
+			MainService.currentBestLocation = location;
 		}
 
 		locations.insert( location );
@@ -337,36 +337,24 @@ public class MainService extends Service implements SensorEventListener, Locatio
 
 	protected void saveLocation() {
 		ContentValues data;
-		if (currentBestLocation == null) {
+		Location l = MainService.currentBestLocation;
+		if (l == null) {
 			return;
 		}
-		SQLiteOpenHelper dbHelper = new LocationsOpenHelper(MainService.this);
+		SQLiteOpenHelper dbHelper = new DatabaseHelper(MainService.this);
 		SQLiteDatabase db = dbHelper.getWritableDatabase();
 		data = new ContentValues();
-		data.put("milliseconds", currentBestLocation.getTime());
-		data.put("longitude", currentBestLocation.getLongitude());
-		data.put("latitude", currentBestLocation.getLatitude());
-		data.put("altitude", currentBestLocation.getAltitude());
+		data.put("milliseconds", l.getTime());
+		data.put("longitude", l.getLongitude());
+		data.put("latitude", l.getLatitude());
+		data.put("altitude", l.getAltitude());
 		data.put("gpsStart", lGPSTimestamp);
-		data.put("accuracy", currentBestLocation.getAccuracy());
-		data.put("bearing", currentBestLocation.getBearing());
-		data.put("speed", currentBestLocation.getSpeed());
-		data.put("provider", currentBestLocation.getProvider());
+		data.put("accuracy", l.getAccuracy());
+		data.put("bearing", l.getBearing());
+		data.put("speed", l.getSpeed());
+		data.put("provider", l.getProvider());
 		db.insert("locations", null, data);
 		db.close();
-
-		//MainActivity.this.updateLocation( this.currentBestLocation );
-		
-		if (mActivityMessenger != null) {
-			Message msg = Message.obtain();
-			msg.what = MainService.MSG_LOCATION;
-			msg.obj = currentBestLocation;
-			try {
-				mActivityMessenger.send(msg);
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-		}
 	}
 
 	@Override
@@ -459,25 +447,7 @@ public class MainService extends Service implements SensorEventListener, Locatio
 
 
 	// OTHER
- 	
- 	public class LocationsOpenHelper extends SQLiteOpenHelper {
-		public LocationsOpenHelper(Context context) {
-			super(context, "locations.db", null, 1);
-		}
-
-		@Override
-		public void onCreate(SQLiteDatabase db) {
-			db.execSQL("create table locations (milliseconds integer, latitude real, longitude real, altitude real, gpsStart integer, accuracy real, bearing real, speed real, provider text, best integer);");
-		}
-
-		@Override
-		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-			// TODO Auto-generated method stub
-		}
- 	}
- 	
- 	
- 	public void sleep(int w) {
+	public void sleep(int w) {
 		// Check desired state
 		if (MainActivity.currentState == false) {
 			// Tracking has been turned off

@@ -11,17 +11,19 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.List;
 
-import android.content.ServiceConnection;
-import android.location.Location;
-import android.os.Bundle;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.content.ServiceConnection;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.drawable.Drawable;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -29,23 +31,18 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.view.Window;
-import android.widget.ImageButton;
-import android.widget.TextView;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.Toast;
 
 public class MainActivity extends MapActivity {
+	public static Context myContext;
 	SharedPreferences sharedPreferences;
-	MapView mapView = null;
-	MapController mapController = null;
-	List<Overlay> mapOverlays = null;
-	Drawable drawable = null;
-	MainOverlay gpsingOverlay = null;
-	boolean paused = false;
-	
-	private CircularBuffer mRecentLocations;
+	MapView myMapView = null;
+	MainItemizedOverlay myItemizedOverlays = null;
+	List<Overlay> myOverlays = null;
+	protected Drawable myDrawable = null;
 	
 	public static boolean currentState = false; // not running
 	
@@ -91,35 +88,6 @@ public class MainActivity extends MapActivity {
 		public void handleMessage(Message msg) {
 			switch (msg.what) {
 				case MainService.MSG_LOCATION:
-					// Don't update when paused
-					if (paused == true) {
-						return;
-					}
-					Location l = (Location) msg.obj;
-					Double lo, la;
-					la = new Double(l.getLatitude() * 1E6);
-					lo = new Double(l.getLongitude() * 1E6);
-					GeoPoint gp = new GeoPoint(
-						la.intValue(),
-						lo.intValue()
-					);
-					
-					//mRecentLocations.insert(gp);
-					
-					// Redraw these GeoPoints on the map, with path lines, and pretty colors
-					
-					/*
-					mapController.setZoom(21);
-					mapController.setCenter(gp);
-					*/
-
-					OverlayItem overlayItem = new OverlayItem(gp, "Hola, Mundo!", "I'm in Mexico City!");
-					gpsingOverlay.clear();
-					gpsingOverlay.addOverlay(overlayItem);
-					mapOverlays.clear();
-					mapOverlays.add(gpsingOverlay);
-					//mapView.postInvalidate();
-
 					break;
 				default:
 					super.handleMessage(msg);
@@ -139,20 +107,15 @@ public class MainActivity extends MapActivity {
 	}
 	
 	protected void toggleState(boolean newState) {
-		TextView tv;
 		Debug(String.format("New state: %s", (newState == true ? "on" : "off")));
 		if (currentState == true) {
 			if (newState == false) {
 				// Alarms are active. Service may be running right now
 				// if so, let it finish, then simply skip the call to re-schedule
-				tv = (TextView) findViewById(R.id.statusState);
-				tv.setText("Not tracking");
 				stopGPSing();
 			}
 		} else {
 			if (newState == true) {
-				tv = (TextView) findViewById(R.id.statusState);
-				tv.setText("Tracking");
 				
 				// Schedule an alarm
 				startGPSing(); // will replace this later
@@ -164,48 +127,16 @@ public class MainActivity extends MapActivity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		requestWindowFeature(Window.FEATURE_NO_TITLE);
+		myContext = this;
 		setContentView(R.layout.activity_main);
 		
 		sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
-		/*
-		CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
-		cb.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				if (((CheckBox) v).isChecked()) {
-					startGPSing();
-
-				} else {
-					stopGPSing();
-				}
-			}
-		});
-		*/
+		myMapView = (MapView) findViewById(R.id.mapview);
+		myMapView.setBuiltInZoomControls(true);
+		myOverlays = myMapView.getOverlays();
 		
-		ImageButton buttonSettings = (ImageButton) findViewById(R.id.settings_button);
-		buttonSettings.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				// start activity
-				Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
-				startActivity(intent);
-			}
-		});
-
-		mapView = (MapView) findViewById(R.id.mapview);
-		mapView.setBuiltInZoomControls(true);
-		mapController = mapView.getController();
-
-		mapOverlays = mapView.getOverlays();
-		gpsingOverlay = new MainOverlay(
-			this.getResources().getDrawable(R.drawable.marker),
-			getApplicationContext()
-		);
-		//mapOverlays.add(gpsingOverlay);
-		
-		mRecentLocations = new CircularBuffer(10);
+		myDrawable = this.getResources().getDrawable(R.drawable.marker);
 	}
 	
 	@Override
@@ -213,13 +144,11 @@ public class MainActivity extends MapActivity {
 		super.onStart();
 		
 		Debug("Activity started");
-		//again();
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
-		paused = false;
 
 		/*
 		CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
@@ -234,17 +163,24 @@ public class MainActivity extends MapActivity {
 		// If we turned off the service, handle that change
 		toggleState( newState );
 	}
+	
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		Debug("Creating options menu");
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.main, menu);
+		return true;
+	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
-		paused = true;
 	}
 
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		stopGPSing();
+		//stopGPSing();
 	}
 
 	// Maps Methods
@@ -252,13 +188,28 @@ public class MainActivity extends MapActivity {
 	protected boolean isRouteDisplayed() {
 		return false;
 	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// Handle item selection
+		switch (item.getItemId()) {
+			case R.id.menu_refresh:
+				showMarkers();
+				return true;
+			case R.id.menu_settings:
+				Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
+				startActivity(intent);
+				return true;
+			default:
+				return super.onOptionsItemSelected(item);
+		}
+	}
 
 
 	private void startGPSing() {
 		currentState = true;
 		Intent i = new Intent(getApplicationContext(), MainService.class);
 		i.putExtra("com.szlosek.whenmoving.IntentExtra", 0);
-		//MainService.requestLocation(this, i);
 		bindService(i, MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
 	}
 
@@ -274,6 +225,44 @@ public class MainActivity extends MapActivity {
 			}
 		}
 		unbindService(mConnection);
+	}
+	
+	protected void showMarkers() {
+		SQLiteOpenHelper dbHelper = new DatabaseHelper(this);
+		SQLiteDatabase db = dbHelper.getReadableDatabase();
+		
+		// Clear layer/markers
+		myOverlays.clear();
+		myItemizedOverlays = new MainItemizedOverlay(myDrawable);
+		
+		// Get 10 newest locations
+		Cursor c = db.query("locations", null, null, null, null, null, "milliseconds DESC", "10");
+		int iLongitude = c.getColumnIndex("longitude");
+		int iLatitude = c.getColumnIndex("latitude");
+		while (c.moveToNext()) {
+			Double lo, la;
+			la = new Double(c.getFloat(iLatitude) * 1E6);
+			lo = new Double(c.getFloat(iLongitude) * 1E6);
+			GeoPoint gp = new GeoPoint(
+				la.intValue(),
+				lo.intValue()
+			);
+			
+			OverlayItem overlayItem = new OverlayItem(gp, "Hola, Mundo!", "I'm in Mexico City!");
+			myItemizedOverlays.addOverlay(overlayItem);
+		}
+		
+		myOverlays.add(myItemizedOverlays);
+		/*
+		// Redraw these GeoPoints on the map, with path lines, and pretty colors
+		mapController.setZoom(21);
+		mapController.setCenter(gp);
+
+
+		OverlayItem overlayItem = new OverlayItem(gp, "Hola, Mundo!", "I'm in Mexico City!");
+		myItemizedOverlays.addOverlay(overlayItem);
+		myOverlays.add(myItemizedOverlays);
+	*/
 	}
 
 }

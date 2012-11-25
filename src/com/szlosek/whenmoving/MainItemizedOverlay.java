@@ -11,17 +11,20 @@ import android.content.Context;
 import android.graphics.drawable.Drawable;
 
 
-public class MainOverlay extends ItemizedOverlay {
+public class MainItemizedOverlay extends ItemizedOverlay {
 	private ArrayList<OverlayItem> mOverlays = new ArrayList<OverlayItem>();
-	Context mContext;
+	Context myContext;
 
-	public MainOverlay(Drawable defaultMarker) {
+	public MainItemizedOverlay(Drawable defaultMarker) {
 		super(boundCenterBottom(defaultMarker));
+		myContext = MainActivity.myContext;
+		populate();
 	}
 
-	public MainOverlay(Drawable defaultMarker, Context context) {
+	public MainItemizedOverlay(Drawable defaultMarker, Context context) {
 		super(boundCenterBottom(defaultMarker));
-		mContext = context;
+		populate();
+		myContext = context;
 	}
 
 	public void clear() {
@@ -47,9 +50,9 @@ public class MainOverlay extends ItemizedOverlay {
 	@Override
 	protected boolean onTap(int index) {
 		OverlayItem item = mOverlays.get(index);
-		AlertDialog.Builder dialog = new AlertDialog.Builder(mContext);
-		dialog.setTitle(item.getTitle());
-		dialog.setMessage(item.getSnippet());
+		AlertDialog.Builder dialog = new AlertDialog.Builder(myContext);
+		dialog.setTitle("title"); //item.getTitle());
+		dialog.setMessage("message"); //item.getSnippet());
 		dialog.show();
 		return true;
 	}
