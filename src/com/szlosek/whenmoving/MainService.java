@@ -506,7 +506,7 @@ public class MainService extends Service implements SensorEventListener, Locatio
 					mActivityMessenger = msg.replyTo;
 					break;
 				case MainService.MSG_EXIT:
-					Toast.makeText(getApplicationContext(), "exit", Toast.LENGTH_SHORT).show();
+					Toast.makeText(getApplicationContext(), "Stopping", Toast.LENGTH_SHORT).show();
 					// Cancel all alarms
 					if (MainService.this.pi != null) {
 						AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
@@ -628,9 +628,9 @@ public class MainService extends Service implements SensorEventListener, Locatio
 				.build();
 			*/
 			if (newState == true) {
-				s = String.format("On the move");
+				s = String.format("You're on the move");
 			} else {
-				s = String.format("Sitting duck");
+				s = String.format("You're a sitting duck");
 			}
 		
 			// don't keep creating this if state hasn't transitioned
