@@ -8,6 +8,7 @@ import com.google.android.maps.OverlayItem;
 
 import java.lang.Thread;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 
@@ -30,6 +31,7 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
+import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -43,7 +45,7 @@ public class MainActivity extends MapActivity {
 	List<Overlay> myOverlays = null;
 	protected Drawable myDrawable = null;
 	
-	public static boolean currentState = false; // not running
+	//public static boolean currentState = false; // not running
 	
 	public static int prefInterval = 0;
 	public static int prefTimeout = 0;
@@ -107,7 +109,7 @@ public class MainActivity extends MapActivity {
 	
 	protected void toggleState(boolean newState) {
 		Debug(String.format("New state: %s", (newState == true ? "on" : "off")));
-		if (currentState == true) {
+		if (MainApplication.currentState == true) {
 			if (newState == false) {
 				// Alarms are active. Service may be running right now
 				// if so, let it finish, then simply skip the call to re-schedule
@@ -149,18 +151,9 @@ public class MainActivity extends MapActivity {
 	protected void onResume() {
 		super.onResume();
 
-		/*
-		CheckBox cb = (CheckBox) findViewById(R.id.checkBox1);
-		cb.setChecked( MainActivity.serviceRunning );
-		*/
+		preferenceChange2();
 		
-		//  Get latest settings, and update accordingly
-		boolean newState = sharedPreferences.getBoolean("pref_onoff", false); // false is off/not-running
-		prefInterval = Integer.parseInt( sharedPreferences.getString("pref_interval", "60") );
-		prefTimeout = Integer.parseInt( sharedPreferences.getString("pref_timeout", "30") );
 		
-		// If we turned off the service, handle that change
-		toggleState( newState );
 	}
 	
 	@Override
@@ -206,14 +199,14 @@ public class MainActivity extends MapActivity {
 
 
 	private void startGPSing() {
-		currentState = true;
+		MainApplication.currentState = true;
 		Intent i = new Intent(getApplicationContext(), MainService.class);
 		i.putExtra("com.szlosek.whenmoving.IntentExtra", 0);
 		bindService(i, MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
 	}
 
 	private void stopGPSing() {
-		currentState = false;
+		MainApplication.currentState = false;
 		if (mServiceMessenger != null) {
 			Message msg = Message.obtain();
 			msg.what = MainService.MSG_EXIT;
@@ -224,6 +217,20 @@ public class MainActivity extends MapActivity {
 			}
 		}
 		unbindService(mConnection);
+	}
+/*
+	public static void preferenceChange() {
+		MainActivity.this.preferenceChange2();
+	}
+*/
+	public void preferenceChange2() {
+		//  Get latest settings, and update accordingly
+		boolean newState = sharedPreferences.getBoolean("pref_onoff", false); // false is off/not-running
+		prefInterval = Integer.parseInt( sharedPreferences.getString("pref_interval", "60") );
+		prefTimeout = Integer.parseInt( sharedPreferences.getString("pref_timeout", "30") );
+		
+		// If we turned off the service, handle that change
+		toggleState( newState );
 	}
 	
 	protected void showMarkers() {
@@ -236,8 +243,10 @@ public class MainActivity extends MapActivity {
 		
 		// Get 10 newest locations
 		Cursor c = db.query("locations", null, null, null, null, null, "milliseconds DESC", "10");
+		int iMilliseconds = c.getColumnIndex("milliseconds");
 		int iLongitude = c.getColumnIndex("longitude");
 		int iLatitude = c.getColumnIndex("latitude");
+		
 		while (c.moveToNext()) {
 			Double lo, la;
 			la = new Double(c.getFloat(iLatitude) * 1E6);
@@ -246,8 +255,13 @@ public class MainActivity extends MapActivity {
 				la.intValue(),
 				lo.intValue()
 			);
+			Date d = new Date( c.getLong(iMilliseconds) );
 			
-			OverlayItem overlayItem = new OverlayItem(gp, "Hola, Mundo!", "I'm in Mexico City!");
+			OverlayItem overlayItem = new OverlayItem(
+				gp,
+				DateFormat.format("MM/d h:mm:ss aa", d).toString(),
+				String.format("Lon: %f\nLat: %f", c.getFloat(iLongitude), c.getFloat(iLatitude))
+			);
 			myItemizedOverlays.addOverlay(overlayItem);
 		}
 		

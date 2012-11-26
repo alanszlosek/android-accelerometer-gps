@@ -11,4 +11,9 @@ public class SettingsActivity extends PreferenceActivity {
 	}
 	
 	// Is there an onPause ... some other way I can update the MainActivity if this activity goes away
+	@Override
+	protected void onPause() {
+		super.onPause();
+		//MainActivity.preferenceChange();
+	}
 }

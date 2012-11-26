@@ -449,7 +449,7 @@ public class MainService extends Service implements SensorEventListener, Locatio
 	// OTHER
 	public void sleep(int w) {
 		// Check desired state
-		if (MainActivity.currentState == false) {
+		if (MainApplication.currentState == false) {
 			// Tracking has been turned off
 			return;
 		}

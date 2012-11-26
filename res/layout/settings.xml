@@ -2,23 +2,23 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 	<CheckBoxPreference
 		android:key="pref_onoff"
-		android:title="On/Off"
-		android:summary="Turn tracking on/off"
+		android:title="@string/pref_onoff_title"
+		android:summary="@string/pref_onoff_summary"
 		android:defaultValue="true" />
 	<ListPreference
 		android:key="pref_interval"
-		android:title="Tracking Interval"
-		android:summary="How frequently to track location"
+		android:title="@string/pref_interval_title"
+		android:summary="@string/pref_interval_summary"
 		android:entries="@array/pref_intervalLabels"
 		android:entryValues="@array/pref_intervalValues"
 		android:defaultValue="@string/pref_intervalDefault" />
 		
 	<ListPreference
 		android:key="pref_timeout"
-		android:title="GPS Timeout"
-		android:summary="If no GPS fix within this, stop polling"
-		android:entries="@array/pref_timeoutLabels"
-		android:entryValues="@array/pref_timeoutValues"
+		android:title="@string/pref_timeout_title"
+		android:summary="@string/pref_timeout_summary"
+		android:entries="@array/pref_intervalLabels"
+		android:entryValues="@array/pref_intervalValues"
 		android:defaultValue="@string/pref_timeoutDefault" />
 
 </PreferenceScreen>

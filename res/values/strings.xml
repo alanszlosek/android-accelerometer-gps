@@ -1,38 +1,39 @@
 <resources>
 	<string name="app_name">When Moving</string>
-	<string name="menu_settings">Settings</string>
-	<string name="menu_exit">Exit</string>
-	<string name="title_activity_main">When Moving</string>
+	<string name="settings">Settings</string>
+	<string name="refresh_markers">Refresh Markers</string>
+	
+	<string name="pref_onoff_title">On/Off</string>
+	<string name="pref_onoff_summary">Turn tracking on/off</string>
+	<string name="pref_interval_title">Tracking Interval</string>
+	<string name="pref_interval_summary">How frequently to track location</string>
+	<string name="pref_timeout_title">GPS Timeout</string>
+	<string name="pref_timeout_summary">If no GPS fix within this, stop polling</string>
 
-	<string name="pref_intervalDefault">60</string>
 	<string-array name="pref_intervalLabels">
+		<item>10 seconds</item>
+		<item>20 seconds</item>
 		<item>30 seconds</item>
-		<item>45 seconds</item>
+		<item>40 seconds</item>
+		<item>50 seconds</item>
 		<item>60 seconds</item>
-		<item>75 seconds</item>
+		<item>70 seconds</item>
+		<item>80 seconds</item>
 		<item>90 seconds</item>
 	</string-array>
 	<string-array name="pref_intervalValues">
+		<item>10</item>
+		<item>20</item>
 		<item>30</item>
-		<item>45</item>
+		<item>40</item>
+		<item>50</item>
 		<item>60</item>
-		<item>75</item>
+		<item>70</item>
+		<item>80</item>
 		<item>90</item>
 	</string-array>
 	
+	<string name="pref_intervalDefault">60</string>
 	<string name="pref_timeoutDefault">30</string>
-	<string-array name="pref_timeoutLabels">
-		<item>30 seconds</item>
-		<item>45 seconds</item>
-		<item>60 seconds</item>
-		<item>75 seconds</item>
-		<item>90 seconds</item>
-	</string-array>
-	<string-array name="pref_timeoutValues">
-		<item>30</item>
-		<item>45</item>
-		<item>60</item>
-		<item>75</item>
-		<item>90</item>
-	</string-array>
+
 </resources>
