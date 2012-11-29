@@ -44,6 +44,7 @@ public class MainApplication extends Application {
 	
 	public void startup() {
 		wakeLock1(true);
+		Debug("startup");
 		Intent i = new Intent(this, MainService.class);
 		startService(i);
 	}
@@ -55,6 +56,7 @@ public class MainApplication extends Application {
 				PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
 				"WakeLock:Accelerometer"
 			);
+			mWakeLock1.acquire();
 		} else {
 			if (mWakeLock1 != null) {
 				if (mWakeLock1.isHeld()) {
@@ -71,6 +73,7 @@ public class MainApplication extends Application {
 				PowerManager.PARTIAL_WAKE_LOCK,
 				"WakeLock:GPS"
 			);
+			mWakeLock2.acquire();
 		} else {
 			if (mWakeLock2 != null) {
 				if (mWakeLock2.isHeld()) {

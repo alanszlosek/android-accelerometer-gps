@@ -444,7 +444,8 @@ public class MainService extends Service implements SensorEventListener, Locatio
 			// Tracking has been turned off, don't schedule any new alarms
 			return START_NOT_STICKY;
 			
-		} else startAccelerometer();
+		}
+		startAccelerometer();
 		return START_REDELIVER_INTENT;
 		//return START_STICKY;
 	}
