@@ -17,7 +17,7 @@ public class MainItemizedOverlay extends ItemizedOverlay {
 
 	public MainItemizedOverlay(Drawable defaultMarker) {
 		super(boundCenterBottom(defaultMarker));
-		myContext = MainActivity.myContext;
+		myContext = MainApplication.getInstance();
 		populate();
 	}
 

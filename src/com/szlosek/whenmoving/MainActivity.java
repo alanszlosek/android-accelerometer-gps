@@ -25,11 +25,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
-import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.text.format.DateFormat;
 import android.util.Log;
@@ -49,13 +44,6 @@ public class MainActivity extends MapActivity {
 
 	public void Debug(String message) {
 		Log.d("WhenMoving", message);
-	}
-
-
-	// Called by service when it's up, so this activity can bind to it
-	public static void ready() {
-		// This needs to wait for the service to come online
-		//bindService(new Intent(MainActivity.this, MainService.class), MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
 	}
 	
 	protected void toggleState(boolean newState) {

@@ -3,7 +3,6 @@ package com.szlosek.whenmoving;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 
 // Receives AlarmManager RTC_WAKEUPs ... stops GPS polling
 public class TimeoutReceiver extends BroadcastReceiver {

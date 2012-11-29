@@ -114,7 +114,7 @@ public class MainService extends Service implements SensorEventListener, Locatio
 		
 		stopAccelerometer();
 
-		Debug(String.format("readings: %d significant: %d", iAccelReadings, iAccelSignificantReadings));
+		Debug(String.format("Accelerometer readings: %d Significant: %d", iAccelReadings, iAccelSignificantReadings));
 
 		// Appeared to be moving 30% of the time?
 		// If the bar is this low, why not report motion at the first significant reading and be done with it?
