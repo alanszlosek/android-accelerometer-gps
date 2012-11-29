@@ -29,12 +29,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
-import android.os.PowerManager;
-import android.os.RemoteException;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -66,75 +61,9 @@ public class MainService extends Service implements SensorEventListener, Locatio
 	private LocationManager mLocationManager = null;
 	private Location bestLocation = null;
 	private PendingIntent pi;
-	private LocationCircularBuffer locations;
+	private CircularBuffer locations;
 	private boolean cellOnly = false;
 	private float lowestAccuracy;
-
-	// Other
-	private static volatile PowerManager.WakeLock wakeLock1 = null;
-	private static volatile PowerManager.WakeLock wakeLock2 = null;
-	private static volatile PowerManager.WakeLock wakeLock3 = null;
-
-	// Messaging
-	private final Messenger mServiceMessenger = new Messenger(new IncomingHandler());
-	private Messenger mActivityMessenger = null;
-	public static final int MSG_HELLO = 1;
-	public static final int MSG_EXIT = 2;
-	public static final int MSG_LOCATION = 3;
-
-	
-	// Called from MainReceiver ...
-	// Acquires a WakeLock, polls Accelerometer, and then may poll GPS
-	public static void requestLocation(Context ctxt, Intent i) {
-		Debug("Alarmed");
-
-		getLock(0, ctxt.getApplicationContext()).acquire();
-
-		i.putExtra("com.szlosek.whenmoving.IntentExtra", 0);
-		i.setClass(ctxt, MainService.class); // Not certain I need this anymore
-		ctxt.startService(i);
-	}
-
-	public static void timeoutGPS(Context ctxt, Intent i) {
-		Debug("Timed out");
-
-		getLock(2, ctxt).acquire();
-		i.setClass(ctxt, MainService.class); // Not certain I need this anymore
-		ctxt.startService(i);
-	}
-	
-
-	// Returns the requested WakeLock, creating it if necessary
-	synchronized private static PowerManager.WakeLock getLock(int i, Context context) {
-		PowerManager.WakeLock a;
-		if (wakeLock1 == null) {
-			PowerManager mgr = (PowerManager)context.getApplicationContext().getSystemService(Context.POWER_SERVICE);
-			wakeLock1 = mgr.newWakeLock(
-				PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
-				"lockAccelerometer"
-			);
-			wakeLock1.setReferenceCounted(true);
-		}
-		if (wakeLock2 == null) {
-			PowerManager mgr = (PowerManager)context.getApplicationContext().getSystemService(Context.POWER_SERVICE);
-			wakeLock2 = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lockGPS");
-			wakeLock2.setReferenceCounted(true);
-		}
-		if (wakeLock3 == null) {
-			PowerManager mgr = (PowerManager)context.getApplicationContext().getSystemService(Context.POWER_SERVICE);
-			wakeLock3 = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lockGPSTimeout");
-			wakeLock3.setReferenceCounted(true);
-		}
-		if (i == 0) {
-			return wakeLock1;
-		} else {
-			if (i == 1) {
-				return wakeLock2;
-			} else {
-				return wakeLock3;
-			}
-		}
-	}
 
 	// ACCELEROMETER METHODS
 	public void startAccelerometer() {
@@ -171,15 +100,13 @@ public class MainService extends Service implements SensorEventListener, Locatio
 				+
 				Math.pow(z,2)
 			)
-			-
-			9.8
 		);
-		// Was 0.6. Lowered to 0.3 to account for smooth motion from Portland Streetcar
-		if (accel > 0.3) {
+		// Was 0.6. Lowered to 0.3 (plus gravity) to account for smooth motion from Portland Streetcar
+		if (accel > 10.1) {
 			iAccelSignificantReadings++;
 		}
 		
-		Debug(String.format("event: %f %f %f %f %f", x, y, z, accel, 0.600));
+		//Debug(String.format("event: %f %f %f %f %f", x, y, z, accel, 0.600));
 		
 		// Get readings for 1 second
 		// Maybe we should sample for longer given that I've lowered the threshold
@@ -196,8 +123,8 @@ public class MainService extends Service implements SensorEventListener, Locatio
 			Debug("Moving");
 			
 			// Get new lock for GPS so we can turn off screen
-			getLock(1, MainService.this.getApplicationContext()).acquire();
-			getLock(0, MainService.this.getApplicationContext()).release();
+			MainApplication.wakeLock2(true);
+			MainApplication.wakeLock1(false);
 			
 			// Start GPS
 			startGPS();
@@ -205,8 +132,8 @@ public class MainService extends Service implements SensorEventListener, Locatio
 		} else {
 			setMoving(false);
 			Debug("Stationary");
-			sleep(0);
-			getLock(0, MainService.this.getApplicationContext()).release();
+			sleep();
+			MainApplication.wakeLock1(false);
  		}
 	}
 
@@ -239,8 +166,8 @@ public class MainService extends Service implements SensorEventListener, Locatio
 
 		if (iProviders == 0) {
 			Debug("No providers available");
-			sleep(MainActivity.prefInterval);
-			getLock(1, MainService.this.getApplicationContext()).release();
+			sleep();
+			MainApplication.wakeLock2(false);
 			return;
 		}
 
@@ -248,12 +175,12 @@ public class MainService extends Service implements SensorEventListener, Locatio
 		lowestAccuracy = 9999;
 		mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
 		cal = new GregorianCalendar();
-		i = new Intent(this.getApplicationContext(), TimeoutReceiver.class);
-		this.pi = PendingIntent.getBroadcast(this.getApplicationContext(), 0, i, 0);
+		i = new Intent(this, TimeoutReceiver.class);
+		this.pi = PendingIntent.getBroadcast(this, 0, i, 0);
 		cal.add(Calendar.SECOND, MainActivity.prefTimeout);
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), this.pi);
 
-		locations = new LocationCircularBuffer(MainService.LOCATION_BUFFER);
+		locations = new CircularBuffer(MainService.LOCATION_BUFFER);
 	}
 
 	public void stopGPS() {
@@ -309,7 +236,7 @@ public class MainService extends Service implements SensorEventListener, Locatio
 			minAccuracy = 9999;
 			maxAccuracy = 0;
 			for (i = 0; i < locations.size(); i++) {
-				Location l = locations.get(i);
+				Location l = (Location) locations.get(i);
 				if (l == null) continue;
 				minAccuracy = Math.min(minAccuracy, l.getAccuracy());
 				maxAccuracy = Math.max(maxAccuracy, l.getAccuracy());
@@ -331,8 +258,8 @@ public class MainService extends Service implements SensorEventListener, Locatio
 
 		// Don't like this being hardcoded here ... need a better scheme for handling this
 		// Would rather wait a minute between GPS attempts
-		sleep(MainActivity.prefInterval);
-		getLock(1, MainService.this.getApplicationContext()).release();
+		sleep();
+		MainApplication.wakeLock2(false);
 	}
 
 	protected void saveLocation() {
@@ -447,84 +374,38 @@ public class MainService extends Service implements SensorEventListener, Locatio
 
 
 	// OTHER
-	public void sleep(int w) {
+	public void sleep() {
 		// Check desired state
-		if (MainApplication.currentState == false) {
-			// Tracking has been turned off
+		if (MainApplication.trackingOn == false) {
+			Debug("Tracking has been toggled off. Not scheduling any more wakeup alarms");
+			stopSelf();
+			// Tracking has been turned off, don't schedule any new alarms
 			return;
 		}
 		AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
 		Intent i = new Intent(this, MainReceiver.class);
 		Calendar cal = new GregorianCalendar();
 
-		if (w == 0) {
-			Debug(String.format("Waiting %d seconds", MainActivity.prefInterval));
-			cal.add(Calendar.SECOND, MainActivity.prefInterval);
-		} else {
-			cal.add(Calendar.SECOND, w);
-		}
+		Debug(String.format("Waiting %d seconds", MainActivity.prefInterval));
+		cal.add(Calendar.SECOND, MainActivity.prefInterval);
 
 		this.pi = PendingIntent.getBroadcast(this, 0, i, 0);
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), this.pi);
 	}
 
-	private void handleIntent(Intent intent) {
-		Bundle b = intent.getExtras();
-
-		int a = b.getInt("com.szlosek.whenmoving.IntentExtra");
-
-		if (a == 0) { // Start service 
-			// Which type of intent have we received?
-			Debug("Service.onStartCommand=StartGPS");
-			// Will this be destroyed?
-			startAccelerometer();
-
-		} else { // GPS timeout, so stop
-			Debug("Service.onStartCommand=StopGPS");
-			stopGPS();
-			saveLocation();
-			sleep(30);
-			if (getLock(1, MainService.this.getApplicationContext()).isHeld()) {
-				getLock(1, MainService.this.getApplicationContext()).release();
-			}
-			getLock(2, MainService.this.getApplicationContext()).release();
-		}
-		
-		
+	public void gpsTimeout() {
+		Debug("GPS timeout");
+		stopGPS();
+		saveLocation();
+		sleep();
+		MainApplication.wakeLock2(false);
 	}
-
-
-
-
-	// Message Handler
-	class IncomingHandler extends Handler {
-		@Override
-		public void handleMessage(Message msg) {
-			switch (msg.what) {
-				// Client is sending us it's message handler
-				case MainService.MSG_HELLO:
-					mActivityMessenger = msg.replyTo;
-					break;
-				case MainService.MSG_EXIT:
-					Toast.makeText(getApplicationContext(), "Stopping", Toast.LENGTH_SHORT).show();
-					// Cancel all alarms
-					if (MainService.this.pi != null) {
-						AlarmManager mgr = (AlarmManager)getSystemService(ALARM_SERVICE);
-						mgr.cancel(MainService.this.pi);
-						MainService.this.pi = null;
-					}
-					// Might be nice to have a state machine state variable so it's easier to know how to transition out of the current state
-					stopSelf();
-					break;
-				default:
-					super.handleMessage(msg);
-			}
-		}
-	}
+	
 	
 	@Override
 	public void onCreate() {
 		super.onCreate();
+		MainApplication.mServiceInstance = this;
 		Debug("Service.onCreate");
 		
 		mPendingIntent = PendingIntent.getActivity(
@@ -540,8 +421,6 @@ public class MainService extends Service implements SensorEventListener, Locatio
 		startForeground(iNotificationId, mNotification);
 		
 		/*
-
-
 		//HandlerThread thread = new HandlerThread("ServiceStartArguments", Process.THREAD_PRIORITY_BACKGROUND);
 		HandlerThread thread = new HandlerThread("ServiceStartArguments", Process.THREAD_PRIORITY_BACKGROUND);
 		thread.setDaemon(true);
@@ -557,30 +436,32 @@ public class MainService extends Service implements SensorEventListener, Locatio
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Debug("Service.onStartCommand");
-		//MainActivity.serviceRunning = true;
-		handleIntent(intent);
+		startAccelerometer();
 		return START_REDELIVER_INTENT;
 		//return START_STICKY;
 	}
 
 	@Override
 	public IBinder onBind(Intent intent) {
+		/*
 		Debug("Service.onBind");
 		getLock(0, getApplicationContext()).acquire();
 		handleIntent(intent);
 		return mServiceMessenger.getBinder();
+		*/
+		return null;
 	}
 
 	@Override
 	public boolean onUnbind(Intent intent) {
-		mActivityMessenger = null;
+		//mActivityMessenger = null;
 		return true;
 	}
 
 	@Override
 	public void onDestroy() {
 		Debug("Service.onDestroy");
-		//MainActivity.serviceRunning = true;
+		MainApplication.mServiceInstance = null;
 	}
 
 
@@ -642,8 +523,7 @@ public class MainService extends Service implements SensorEventListener, Locatio
 			mNotification.setLatestEventInfo(this, "When Moving", s, mPendingIntent);
 		}
 		
-		mContext = getApplicationContext();
-		nm = (NotificationManager) mContext.getSystemService(NOTIFICATION_SERVICE);
+		nm = (NotificationManager) this.getSystemService(NOTIFICATION_SERVICE);
 		nm.notify(123, mNotification);
 		
 		

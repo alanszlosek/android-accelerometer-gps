@@ -10,8 +10,6 @@ public class TimeoutReceiver extends BroadcastReceiver {
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
-		intent.putExtra("com.szlosek.whenmoving.IntentExtra", 1);
-		// Pass along the intent
-		MainService.timeoutGPS(context, intent);
+		MainApplication.mServiceInstance.gpsTimeout();
 	}
 }

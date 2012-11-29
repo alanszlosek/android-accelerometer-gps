@@ -38,63 +38,14 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 
 public class MainActivity extends MapActivity {
-	public static Context myContext;
 	SharedPreferences sharedPreferences;
 	MapView myMapView = null;
 	MainItemizedOverlay myItemizedOverlays = null;
 	List<Overlay> myOverlays = null;
 	protected Drawable myDrawable = null;
 	
-	//public static boolean currentState = false; // not running
-	
 	public static int prefInterval = 0;
 	public static int prefTimeout = 0;
-
-
-	// Messaging
-	Messenger mServiceMessenger = null;
-	boolean mBound = false;
-	private final Messenger mActivityMessenger = new Messenger(new IncomingHandler());
-
-	private ServiceConnection mConnection = new ServiceConnection() {
-		public void onServiceConnected(ComponentName className, IBinder service) {
-			// This is called when the connection with the service has been
-			// established, giving us the object we can use to
-			// interact with the service.  We are communicating with the
-			// service using a Messenger, so here we get a client-side
-			// representation of that from the raw IBinder object.
-			mServiceMessenger = new Messenger(service);
-			mBound = true;
-
-			Message msg = Message.obtain();
-			msg.what = MainService.MSG_HELLO;
-			msg.replyTo = mActivityMessenger;
-			try {
-				mServiceMessenger.send(msg);
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-		}
-
-		public void onServiceDisconnected(ComponentName className) {
-			// This is called when the connection with the service has been
-			// unexpectedly disconnected -- that is, its process crashed.
-			mServiceMessenger = null;
-			mBound = false;
-		}
-	};
-
-	// Message Handler
-	class IncomingHandler extends Handler {
-		public void handleMessage(Message msg) {
-			switch (msg.what) {
-				case MainService.MSG_LOCATION:
-					break;
-				default:
-					super.handleMessage(msg);
-			}
-		}
-	}
 
 	public void Debug(String message) {
 		Log.d("WhenMoving", message);
@@ -109,15 +60,15 @@ public class MainActivity extends MapActivity {
 	
 	protected void toggleState(boolean newState) {
 		Debug(String.format("New state: %s", (newState == true ? "on" : "off")));
-		if (MainApplication.currentState == true) {
+		if (MainApplication.trackingOn == true) {
 			if (newState == false) {
+				MainApplication.trackingOn = false;
 				// Alarms are active. Service may be running right now
 				// if so, let it finish, then simply skip the call to re-schedule
-				stopGPSing();
+				//stopGPSing();
 			}
 		} else {
 			if (newState == true) {
-				
 				// Schedule an alarm
 				startGPSing(); // will replace this later
 			}
@@ -128,7 +79,6 @@ public class MainActivity extends MapActivity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		myContext = this;
 		setContentView(R.layout.activity_main);
 		
 		sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -172,7 +122,6 @@ public class MainActivity extends MapActivity {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		//stopGPSing();
 	}
 
 	// Maps Methods
@@ -189,7 +138,7 @@ public class MainActivity extends MapActivity {
 				showMarkers();
 				return true;
 			case R.id.menu_settings:
-				Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
+				Intent intent = new Intent(this, SettingsActivity.class);
 				startActivity(intent);
 				return true;
 			default:
@@ -199,25 +148,11 @@ public class MainActivity extends MapActivity {
 
 
 	private void startGPSing() {
-		MainApplication.currentState = true;
-		Intent i = new Intent(getApplicationContext(), MainService.class);
-		i.putExtra("com.szlosek.whenmoving.IntentExtra", 0);
-		bindService(i, MainActivity.this.mConnection, Context.BIND_AUTO_CREATE);
+		MainApplication.trackingOn = true;
+		
+		MainApplication.getInstance().startup();
 	}
-
-	private void stopGPSing() {
-		MainApplication.currentState = false;
-		if (mServiceMessenger != null) {
-			Message msg = Message.obtain();
-			msg.what = MainService.MSG_EXIT;
-			try {
-				mServiceMessenger.send(msg);
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-		}
-		unbindService(mConnection);
-	}
+	
 /*
 	public static void preferenceChange() {
 		MainActivity.this.preferenceChange2();

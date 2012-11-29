@@ -9,7 +9,6 @@ public class MainReceiver extends BroadcastReceiver {
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
-		// Pass along the intent
-		MainService.requestLocation(context, intent);
+		MainApplication.getInstance().startup();
 	}
 }
