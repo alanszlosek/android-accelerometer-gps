@@ -31,7 +31,6 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.Toast;
 
 
 public class MainService extends Service implements SensorEventListener, LocationListener {
@@ -177,7 +176,7 @@ public class MainService extends Service implements SensorEventListener, Locatio
 		cal = new GregorianCalendar();
 		i = new Intent(this, TimeoutReceiver.class);
 		this.pi = PendingIntent.getBroadcast(this, 0, i, 0);
-		cal.add(Calendar.SECOND, MainActivity.prefTimeout);
+		cal.add(Calendar.SECOND, MainApplication.prefTimeout);
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), this.pi);
 
 		locations = new CircularBuffer(MainService.LOCATION_BUFFER);
@@ -282,6 +281,7 @@ public class MainService extends Service implements SensorEventListener, Locatio
 		data.put("provider", l.getProvider());
 		db.insert("locations", null, data);
 		db.close();
+		dbHelper.close();
 	}
 
 	@Override
@@ -386,8 +386,8 @@ public class MainService extends Service implements SensorEventListener, Locatio
 		Intent i = new Intent(this, MainReceiver.class);
 		Calendar cal = new GregorianCalendar();
 
-		Debug(String.format("Waiting %d seconds", MainActivity.prefInterval));
-		cal.add(Calendar.SECOND, MainActivity.prefInterval);
+		Debug(String.format("Waiting %d seconds", MainApplication.prefInterval));
+		cal.add(Calendar.SECOND, MainApplication.prefInterval);
 
 		this.pi = PendingIntent.getBroadcast(this, 0, i, 0);
 		mgr.set(AlarmManager.RTC_WAKEUP, cal.getTimeInMillis(), this.pi);
@@ -436,26 +436,22 @@ public class MainService extends Service implements SensorEventListener, Locatio
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Debug("Service.onStartCommand");
-		startAccelerometer();
+		if (MainApplication.trackingOn == false) {
+			
+			Debug("Tracking has been toggled off. Not scheduling any more wakeup alarms");
+			stopSelf();
+			MainApplication.wakeLock1(false);
+			// Tracking has been turned off, don't schedule any new alarms
+			return START_NOT_STICKY;
+			
+		} else startAccelerometer();
 		return START_REDELIVER_INTENT;
 		//return START_STICKY;
 	}
 
 	@Override
 	public IBinder onBind(Intent intent) {
-		/*
-		Debug("Service.onBind");
-		getLock(0, getApplicationContext()).acquire();
-		handleIntent(intent);
-		return mServiceMessenger.getBinder();
-		*/
 		return null;
-	}
-
-	@Override
-	public boolean onUnbind(Intent intent) {
-		//mActivityMessenger = null;
-		return true;
 	}
 
 	@Override

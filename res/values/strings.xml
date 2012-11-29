@@ -1,7 +1,7 @@
 <resources>
 	<string name="app_name">When Moving</string>
 	<string name="settings">Settings</string>
-	<string name="refresh_markers">Refresh Markers</string>
+	<string name="refresh_markers">Show Latest</string>
 	
 	<string name="pref_onoff_title">On/Off</string>
 	<string name="pref_onoff_summary">Turn tracking on/off</string>

@@ -9,7 +9,10 @@ public class MainApplication extends Application {
 	protected static MainApplication mInstance;
 	public static MainService mServiceInstance;
 	
+	// Status and Preferences
 	public static boolean trackingOn = false; // not running
+	public static int prefInterval = 0;
+	public static int prefTimeout = 0;
 	
 	// Wake Locks
 	protected static PowerManager mPowerManager;
@@ -37,6 +40,7 @@ public class MainApplication extends Application {
 		startService(i);
 	}
 	
+	// Accelerometer Wake Lock
 	public static void wakeLock1(boolean up) {
 		if (up) {
 			mWakeLock1 = mPowerManager.newWakeLock(
@@ -47,23 +51,24 @@ public class MainApplication extends Application {
 			if (mWakeLock1 != null) {
 				if (mWakeLock1.isHeld()) {
 					mWakeLock1.release();
-					mWakeLock1 = null;
 				}
+				mWakeLock1 = null;
 			}
 		}
 	}
+	// GPS Wake Lock
 	public static void wakeLock2(boolean up) {
 		if (up) {
 			mWakeLock2 = mPowerManager.newWakeLock(
-				PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
+				PowerManager.PARTIAL_WAKE_LOCK,
 				"WakeLock:GPS"
 			);
 		} else {
 			if (mWakeLock2 != null) {
 				if (mWakeLock2.isHeld()) {
 					mWakeLock2.release();
-					mWakeLock2 = null;
 				}
+				mWakeLock2 = null;
 			}
 		}
 	}
