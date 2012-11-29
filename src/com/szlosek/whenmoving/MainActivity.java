@@ -18,24 +18,19 @@ import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.widget.Toast;
 
 public class MainActivity extends MapActivity {
-	SharedPreferences sharedPreferences;
 	MapView myMapView = null;
-	MainItemizedOverlay myItemizedOverlays = null;
 	protected Drawable myDrawable = null;
 	protected MyLocationOverlay myLocation;
 
@@ -43,29 +38,11 @@ public class MainActivity extends MapActivity {
 		Log.d("WhenMoving", message);
 	}
 	
-	protected void toggleState(boolean newState) {
-		Debug(String.format("New state: %s", (newState == true ? "on" : "off")));
-		if (MainApplication.trackingOn == true) {
-			if (newState == false) {
-				MainApplication.trackingOn = false;
-				// Graceful shutdown in progress
-				Toast.makeText(this, "Gracefully stopping", Toast.LENGTH_SHORT);
-			}
-		} else {
-			if (newState == true) {
-				// Schedule an alarm
-				startGPSing(); // will replace this later
-			}
-		}
-	}
-
 	// Activity 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		
-		sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
 		myMapView = (MapView) findViewById(R.id.mapview);
 		myMapView.setBuiltInZoomControls(true);
@@ -85,7 +62,7 @@ public class MainActivity extends MapActivity {
 	protected void onResume() {
 		super.onResume();
 
-		preferenceChange2();
+		MainApplication.onPreferenceChange();
 		
 		
 	}
@@ -140,21 +117,6 @@ public class MainActivity extends MapActivity {
 		MainApplication.trackingOn = true;
 		
 		MainApplication.getInstance().startup();
-	}
-	
-/*
-	public static void preferenceChange() {
-		MainActivity.this.preferenceChange2();
-	}
-*/
-	public void preferenceChange2() {
-		//  Get latest settings, and update accordingly
-		boolean newState = sharedPreferences.getBoolean("pref_onoff", false); // false is off/not-running
-		MainApplication.prefInterval = Integer.parseInt( sharedPreferences.getString("pref_interval", "60") );
-		MainApplication.prefTimeout = Integer.parseInt( sharedPreferences.getString("pref_timeout", "30") );
-		
-		// If we turned off the service, handle that change
-		toggleState( newState );
 	}
 	
 	protected void showMarkers() {

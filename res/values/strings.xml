@@ -33,7 +33,7 @@
 		<item>90</item>
 	</string-array>
 	
-	<string name="pref_intervalDefault">60</string>
-	<string name="pref_timeoutDefault">30</string>
+	<string name="pref_intervalDefault">40</string>
+	<string name="pref_timeoutDefault">20</string>
 
 </resources>

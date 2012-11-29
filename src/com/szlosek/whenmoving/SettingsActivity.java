@@ -2,6 +2,7 @@ package com.szlosek.whenmoving;
 
 import android.preference.PreferenceActivity;
 import android.os.Bundle;
+import android.util.Log;
 
 public class SettingsActivity extends PreferenceActivity {
 	@Override
@@ -14,6 +15,6 @@ public class SettingsActivity extends PreferenceActivity {
 	@Override
 	protected void onPause() {
 		super.onPause();
-		//MainActivity.preferenceChange();
+		MainApplication.onPreferenceChange();
 	}
 }

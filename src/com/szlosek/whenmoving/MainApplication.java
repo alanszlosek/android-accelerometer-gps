@@ -3,7 +3,11 @@ package com.szlosek.whenmoving;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.PowerManager;
+import android.preference.PreferenceManager;
+import android.util.Log;
+import android.widget.Toast;
 
 public class MainApplication extends Application {
 	protected static MainApplication mInstance;
@@ -28,6 +32,10 @@ public class MainApplication extends Application {
 	}
 	@Override
 	public void onLowMemory() {
+	}
+	
+	public static void Debug(String message) {
+		Log.d("WhenMoving", message);
 	}
 	
 	public static MainApplication getInstance() {
@@ -69,6 +77,35 @@ public class MainApplication extends Application {
 					mWakeLock2.release();
 				}
 				mWakeLock2 = null;
+			}
+		}
+	}
+	
+	public static void onPreferenceChange() {
+		SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(MainApplication.getInstance());
+		//  Get latest settings, and update accordingly
+		boolean newState = sp.getBoolean("pref_onoff", false); // false is off/not-running
+		
+		prefInterval = Integer.parseInt( sp.getString("pref_interval", "60") );
+		prefTimeout = Integer.parseInt( sp.getString("pref_timeout", "30") );
+		
+		// If we turned off the service, handle that change
+		toggleState( newState );
+	}
+	
+	public static void toggleState(boolean newState) {
+		Debug(String.format("New state: %s", (newState == true ? "on" : "off")));
+		if (MainApplication.trackingOn == true) {
+			if (newState == false) {
+				MainApplication.trackingOn = false;
+				// Graceful shutdown in progress
+				Toast.makeText(getInstance(), String.format("Gracefully stopping in %ds", MainApplication.prefInterval), Toast.LENGTH_SHORT).show();
+			}
+		} else {
+			if (newState == true) {
+				// Schedule an alarm
+				MainApplication.trackingOn = true;
+				MainApplication.getInstance().startup();
 			}
 		}
 	}
