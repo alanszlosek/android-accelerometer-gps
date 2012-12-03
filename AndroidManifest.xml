@@ -34,6 +34,16 @@
 				<category android:name="android.intent.category.DEFAULT" />
 			</intent-filter>
 		</activity>
+		
+		<activity
+			android:name=".DaysActivity"
+			android:label="Browse Paths"
+			android:launchMode="singleInstance" >
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
+			</intent-filter>
+		</activity>
 
 		<receiver android:name="com.szlosek.whenmoving.MainReceiver" />
 		<receiver android:name="com.szlosek.whenmoving.TimeoutReceiver" />

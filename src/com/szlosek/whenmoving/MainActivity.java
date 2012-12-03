@@ -98,13 +98,18 @@ public class MainActivity extends MapActivity {
 	
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
+		Intent intent;
 		// Handle item selection
 		switch (item.getItemId()) {
 			case R.id.menu_refresh:
 				showMarkers();
 				return true;
 			case R.id.menu_settings:
-				Intent intent = new Intent(this, SettingsActivity.class);
+				intent = new Intent(this, SettingsActivity.class);
+				startActivity(intent);
+				return true;
+			case R.id.show_days:
+				intent = new Intent(this, DaysActivity.class);
 				startActivity(intent);
 				return true;
 			default:
