@@ -10,6 +10,8 @@ import java.lang.Math;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.Locale;
+import java.util.TimeZone;
 
 import android.app.AlarmManager;
 import android.app.Notification;
@@ -30,6 +32,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.text.format.DateFormat;
 import android.util.Log;
 
 
@@ -147,7 +150,7 @@ public class MainService extends Service implements SensorEventListener, Locatio
 		// Set timeout for 30 seconds
 		AlarmManager mgr = null;
 		Intent i = null;
-		Calendar cal = null;
+		GregorianCalendar cal = null;
 		int iProviders = 0;
 
 		// Make sure at least one provider is available
@@ -263,13 +266,23 @@ public class MainService extends Service implements SensorEventListener, Locatio
 
 	protected void saveLocation() {
 		ContentValues data;
-		Location l = MainService.currentBestLocation;
+		Location l;
+		SQLiteOpenHelper dbHelper;
+		SQLiteDatabase db;
+		GregorianCalendar cal;
+		l = MainService.currentBestLocation;
 		if (l == null) {
 			return;
 		}
-		SQLiteOpenHelper dbHelper = new DatabaseHelper(MainService.this);
-		SQLiteDatabase db = dbHelper.getWritableDatabase();
+		dbHelper = new DatabaseHelper(MainService.this);
+		db = dbHelper.getWritableDatabase();
+		
+		cal = new GregorianCalendar(TimeZone.getTimeZone("GMT"), Locale.US);
+		cal.setTimeInMillis( l.getTime() );
+		
 		data = new ContentValues();
+		data.put("day", DateFormat.format("yyyyMMdd", cal).toString() );
+		data.put("hour", DateFormat.format("hh", cal).toString() );
 		data.put("milliseconds", l.getTime());
 		data.put("longitude", l.getLongitude());
 		data.put("latitude", l.getLatitude());

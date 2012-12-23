@@ -17,6 +17,7 @@ public class MainApplication extends Application {
 	public static boolean trackingOn = false; // not running
 	public static int prefInterval = 0;
 	public static int prefTimeout = 0;
+	public static float prefThreshold = 0.30;
 	
 	// Wake Locks
 	protected static PowerManager mPowerManager;

@@ -11,6 +11,10 @@ import com.google.android.maps.OverlayItem;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.Locale;
+import java.util.TimeZone;
 
 import android.app.Activity;
 import android.app.AlarmManager;
@@ -127,12 +131,24 @@ public class MainActivity extends MapActivity {
 	protected void showMarkers() {
 		SQLiteOpenHelper dbHelper = new DatabaseHelper(this);
 		SQLiteDatabase db = dbHelper.getReadableDatabase();
-		
 		// Clear layer/markers
 		List<Overlay> myOverlays = myMapView.getOverlays();
+		GregorianCalendar cal;
+		cal = new GregorianCalendar(TimeZone.getTimeZone("GMT"), Locale.US);
 		
 		// Get 10 newest locations, all from GPS, and with better than 40 meters accuracy
-		Cursor c = db.query("locations", null, "provider='gps' and accuracy < 40.00", null, null, null, "milliseconds DESC", "10");
+		Cursor c = db.query(
+			"locations",
+			null,
+			"day=? and provider='gps' and accuracy < 40.00",
+			new String[] {
+				DateFormat.format("yyyyMMdd", cal).toString()
+			},
+			null,
+			null,
+			"milliseconds DESC",
+			"1000"
+		);
 		int iMilliseconds = c.getColumnIndex("milliseconds");
 		int iLongitude = c.getColumnIndex("longitude");
 		int iLatitude = c.getColumnIndex("latitude");

@@ -13,6 +13,9 @@ import android.widget.SimpleCursorAdapter;
 
 public class DaysActivity extends ListActivity {
 
+	SQLiteOpenHelper dbHelper;
+	SQLiteDatabase db;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
@@ -20,7 +23,6 @@ public class DaysActivity extends ListActivity {
 		// We'll define a custom screen layout here (the one shown above), but
 		// typically, you could just use the standard ListActivity layout.
 		//setContentView(R.layout.days_list_item);
-
 		
 		SQLiteOpenHelper dbHelper = new DatabaseHelper(this);
 		SQLiteDatabase db = dbHelper.getReadableDatabase();
@@ -44,9 +46,16 @@ public class DaysActivity extends ListActivity {
 		);
 		setListAdapter(adapter);
 	}
-	
+/*	
 	@Override
 	protected void onListItemClick (ListView l, View v, int position, long id) {
 		
+	}
+	*/
+	
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		if (db != null) db.close();
 	}
 }
