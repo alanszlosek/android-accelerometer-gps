@@ -3,9 +3,13 @@
 	<item android:id="@+id/menu_refresh"
 		android:title="@string/refresh_markers"
 		/>
+	<item android:id="@+id/show_days"
+		android:title="Browse Paths" />
+
 	<item android:id="@+id/menu_settings"
 		android:title="@string/settings" />
 		
-	<item android:id="@+id/show_days"
-		android:title="Browse Paths" />
+	<item android:id="@+id/menu_calibrate"
+		android:title="@string/calibrate" />
+
 </menu>

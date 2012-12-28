@@ -17,7 +17,8 @@ public class MainApplication extends Application {
 	public static boolean trackingOn = false; // not running
 	public static int prefInterval = 0;
 	public static int prefTimeout = 0;
-	public static float prefThreshold = 0.30;
+	public static double prefThreshold = 0.30;
+	public static double prefThreshold2 = 10.1;
 	
 	// Wake Locks
 	protected static PowerManager mPowerManager;
@@ -92,6 +93,9 @@ public class MainApplication extends Application {
 		
 		prefInterval = Integer.parseInt( sp.getString("pref_interval", "60") );
 		prefTimeout = Integer.parseInt( sp.getString("pref_timeout", "30") );
+		
+		MainApplication.prefThreshold = Double.parseDouble( sp.getString("pref_threshold", "0.30") );
+		MainApplication.prefThreshold2 = MainApplication.prefThreshold + 9.80;
 		
 		// If we turned off the service, handle that change
 		toggleState( newState );

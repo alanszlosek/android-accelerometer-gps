@@ -21,4 +21,12 @@
 		android:entryValues="@array/pref_intervalValues"
 		android:defaultValue="@string/pref_timeoutDefault" />
 
+	<ListPreference
+		android:key="pref_threshold"
+		android:title="@string/pref_threshold_title"
+		android:summary="@string/pref_threshold_summary"
+		android:entries="@array/pref_thresholdLabels"
+		android:entryValues="@array/pref_thresholdValues"
+		android:defaultValue="@string/pref_thresholdDefault" />
+		
 </PreferenceScreen>

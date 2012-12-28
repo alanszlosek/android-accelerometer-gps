@@ -2,6 +2,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
+	
+	<Spinner
+		android:id="@+id/calibration_threshold"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:padding="@dimen/padding_medium" />
 
 	<!--
 	Big text for status: Moving, Stationary
@@ -17,13 +23,6 @@
 		android:layout_marginBottom="10dp"
 		android:padding="@dimen/padding_medium"
 		android:text="Stationary"
-		/>
-	
-	<EditView
-		android:id="@+id/calibration_threshold"
-		android:layout_width="wrap_content"
-		android:layout_height="wrap_content"
-		android:padding="@dimen/padding_medium"
-		/>
+		android:textSize="12dp" />
 
 </RelativeLayout>

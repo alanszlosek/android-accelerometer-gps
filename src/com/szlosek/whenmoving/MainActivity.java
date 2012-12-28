@@ -116,6 +116,10 @@ public class MainActivity extends MapActivity {
 				intent = new Intent(this, DaysActivity.class);
 				startActivity(intent);
 				return true;
+			case R.id.menu_calibrate:
+				intent = new Intent(this, CalibrationActivity.class);
+				startActivity(intent);
+				return true;
 			default:
 				return super.onOptionsItemSelected(item);
 		}
@@ -134,16 +138,46 @@ public class MainActivity extends MapActivity {
 		// Clear layer/markers
 		List<Overlay> myOverlays = myMapView.getOverlays();
 		GregorianCalendar cal;
-		cal = new GregorianCalendar(TimeZone.getTimeZone("GMT"), Locale.US);
+		String q, dateStart, dateEnd;
+		long millisStart, millisEnd;
+		
+		cal = new GregorianCalendar(TimeZone.getTimeZone("GMT"), Locale.US); // GMT, 
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		dateStart = DateFormat.format("yyyyMMdd", cal).toString();
+		cal.set(Calendar.HOUR_OF_DAY, 23);
+		cal.set(Calendar.MINUTE, 59);
+		cal.set(Calendar.SECOND, 59);
+		dateEnd = DateFormat.format("yyyyMMdd", cal).toString();
+		
+		cal = new GregorianCalendar(); // local
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		millisStart = cal.getTimeInMillis();
+		cal.set(Calendar.HOUR_OF_DAY, 23);
+		cal.set(Calendar.MINUTE, 59);
+		cal.set(Calendar.SECOND, 59);
+		millisEnd = cal.getTimeInMillis();
+		
+
+		
+		q = String.format(
+			"day between %s and %s and milliseconds between %d and %d and provider='gps' and accuracy < 40.00",
+			dateStart,
+			dateEnd,
+			millisStart,
+			millisEnd
+		);
+		Log.d("WM", String.format("query: %s", q));
 		
 		// Get 10 newest locations, all from GPS, and with better than 40 meters accuracy
 		Cursor c = db.query(
 			"locations",
 			null,
-			"day=? and provider='gps' and accuracy < 40.00",
-			new String[] {
-				DateFormat.format("yyyyMMdd", cal).toString()
-			},
+			q,
+			null,
 			null,
 			null,
 			"milliseconds DESC",

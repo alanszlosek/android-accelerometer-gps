@@ -2,6 +2,7 @@
 	<string name="app_name">When Moving</string>
 	<string name="settings">Settings</string>
 	<string name="refresh_markers">Show Latest</string>
+	<string name="calibrate">Calibrate</string>
 	
 	<string name="pref_onoff_title">On/Off</string>
 	<string name="pref_onoff_summary">Turn tracking on/off</string>
@@ -9,6 +10,8 @@
 	<string name="pref_interval_summary">How frequently to track location</string>
 	<string name="pref_timeout_title">GPS Timeout</string>
 	<string name="pref_timeout_summary">If no GPS fix within this, stop polling</string>
+	<string name="pref_threshold_title">Accelerometer Threshold</string>
+	<string name="pref_threshold_summary">To account for accelerometer noise</string>
 
 	<string-array name="pref_intervalLabels">
 		<item>10 seconds</item>
@@ -35,5 +38,35 @@
 	
 	<string name="pref_intervalDefault">40</string>
 	<string name="pref_timeoutDefault">20</string>
+	<string name="pref_thresholdDefault">0.30</string>
+	
+	<string-array name="pref_thresholdLabels">
+		<item>0.05 Newtons</item>
+		<item>0.10 Newtons</item>
+		<item>0.15 Newtons</item>
+		<item>0.20 Newtons</item>
+		<item>0.25 Newtons</item>
+		<item>0.30 Newtons</item>
+		<item>0.35 Newtons</item>
+		<item>0.40 Newtons</item>
+		<item>0.45 Newtons</item>
+		<item>0.50 Newtons</item>
+		<item>0.55 Newtons</item>
+		<item>0.60 Newtons</item>
+	</string-array>
+	<string-array name="pref_thresholdValues">
+		<item>0.05</item>
+		<item>0.10</item>
+		<item>0.15</item>
+		<item>0.20</item>
+		<item>0.25</item>
+		<item>0.30</item>
+		<item>0.35</item>
+		<item>0.40</item>
+		<item>0.45</item>
+		<item>0.50</item>
+		<item>0.55</item>
+		<item>0.60</item>
+	</string-array>
 
 </resources>
