@@ -67,8 +67,6 @@ public class MainActivity extends MapActivity {
 		super.onResume();
 
 		MainApplication.onPreferenceChange();
-		
-		
 	}
 	
 	@Override
@@ -77,6 +75,17 @@ public class MainActivity extends MapActivity {
 		MenuInflater inflater = getMenuInflater();
 		inflater.inflate(R.menu.main, menu);
 		return true;
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		// show latest according to intent
+		if (requestCode == 1) {
+			if (resultCode == Activity.RESULT_OK) {
+				long id = data.getLongExtra("id", 0);
+				showMarkers( String.format("day = %d", id));
+			}
+		}
 	}
 
 	@Override
@@ -106,7 +115,7 @@ public class MainActivity extends MapActivity {
 		// Handle item selection
 		switch (item.getItemId()) {
 			case R.id.menu_refresh:
-				showMarkers();
+				showLatest();
 				return true;
 			case R.id.menu_settings:
 				intent = new Intent(this, SettingsActivity.class);
@@ -114,7 +123,7 @@ public class MainActivity extends MapActivity {
 				return true;
 			case R.id.show_days:
 				intent = new Intent(this, DaysActivity.class);
-				startActivity(intent);
+				startActivityForResult(intent, 1);
 				return true;
 			case R.id.menu_calibrate:
 				intent = new Intent(this, CalibrationActivity.class);
@@ -132,24 +141,10 @@ public class MainActivity extends MapActivity {
 		MainApplication.getInstance().startup();
 	}
 	
-	protected void showMarkers() {
-		SQLiteOpenHelper dbHelper = new DatabaseHelper(this);
-		SQLiteDatabase db = dbHelper.getReadableDatabase();
-		// Clear layer/markers
-		List<Overlay> myOverlays = myMapView.getOverlays();
+	protected void showLatest() {
 		GregorianCalendar cal;
 		String q, dateStart, dateEnd;
 		long millisStart, millisEnd;
-		
-		cal = new GregorianCalendar(TimeZone.getTimeZone("GMT"), Locale.US); // GMT, 
-		cal.set(Calendar.HOUR_OF_DAY, 0);
-		cal.set(Calendar.MINUTE, 0);
-		cal.set(Calendar.SECOND, 0);
-		dateStart = DateFormat.format("yyyyMMdd", cal).toString();
-		cal.set(Calendar.HOUR_OF_DAY, 23);
-		cal.set(Calendar.MINUTE, 59);
-		cal.set(Calendar.SECOND, 59);
-		dateEnd = DateFormat.format("yyyyMMdd", cal).toString();
 		
 		cal = new GregorianCalendar(); // local
 		cal.set(Calendar.HOUR_OF_DAY, 0);
@@ -161,6 +156,12 @@ public class MainActivity extends MapActivity {
 		cal.set(Calendar.SECOND, 59);
 		millisEnd = cal.getTimeInMillis();
 		
+		// Now get year, month and day for start and stop in GMT
+		cal = new GregorianCalendar(TimeZone.getTimeZone("GMT"), Locale.US); // GMT, 
+		cal.setTimeInMillis(millisStart);
+		dateStart = DateFormat.format("yyyyMMdd", cal).toString();
+		cal.setTimeInMillis(millisEnd);
+		dateEnd = DateFormat.format("yyyyMMdd", cal).toString();
 
 		
 		q = String.format(
@@ -170,13 +171,21 @@ public class MainActivity extends MapActivity {
 			millisStart,
 			millisEnd
 		);
-		Log.d("WM", String.format("query: %s", q));
+		showMarkers(q);
+	}
+
+	protected void showMarkers(String where) {
+		SQLiteOpenHelper dbHelper = new DatabaseHelper(this);
+		SQLiteDatabase db = dbHelper.getReadableDatabase();
+		// Clear layer/markers
+		List<Overlay> myOverlays = myMapView.getOverlays();
+
 		
 		// Get 10 newest locations, all from GPS, and with better than 40 meters accuracy
 		Cursor c = db.query(
 			"locations",
 			null,
-			q,
+			where,
 			null,
 			null,
 			null,

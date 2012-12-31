@@ -23,6 +23,7 @@ import android.widget.TextView;
 
 public class CalibrationActivity extends Activity implements AdapterView.OnItemSelectedListener, SensorEventListener {
 	private TextView mStatus;
+	private ArrayAdapter<CharSequence> mAdapter;
 	private Spinner mThreshold;
 	private SensorManager mSensorManager;
 	private int iAccelReadings, iAccelSignificantReadings;
@@ -48,24 +49,26 @@ public class CalibrationActivity extends Activity implements AdapterView.OnItemS
 		Spinner spinner = (Spinner) findViewById(R.id.calibration_threshold);
 		if (spinner == null) return;
 		// Create an ArrayAdapter using the string array and a default spinner layout
-		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
+		mAdapter = ArrayAdapter.createFromResource(
 			this,
-			R.array.pref_thresholdLabels,
+			R.array.pref_thresholdValues,
 			android.R.layout.simple_spinner_item
 		);
 		// Specify the layout to use when the list of choices appears
-		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+		mAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		// Apply the adapter to the spinner
-		spinner.setAdapter(adapter);
+		spinner.setAdapter(mAdapter);
 		spinner.setOnItemSelectedListener(this);
-		
 	}
 	
 	@Override
 	protected void onResume() {
 		super.onResume();
 		Spinner spinner = (Spinner) findViewById(R.id.calibration_threshold);
-		spinner.setSelection( 3);
+		String threshold = sp.getString("pref_threshold", "0.30");
+		CharSequence threshold2 = threshold.subSequence(0, threshold.length() );
+		Log.d("WM", String.format("pos %d", mAdapter.getPosition( threshold2 ) ) );
+		spinner.setSelection( mAdapter.getPosition( threshold2 ) );
 		
 		startAccelerometer();
 	}
@@ -89,7 +92,7 @@ public class CalibrationActivity extends Activity implements AdapterView.OnItemS
 		SharedPreferences.Editor spe;
 		
 		s = (String) parent.getItemAtPosition(pos);
-		threshold = s.substring(0,3);
+		threshold = s.substring(0,4);
 
 		spe = sp.edit();
 		spe.putString("pref_threshold", threshold);

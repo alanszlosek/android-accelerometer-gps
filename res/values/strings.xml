@@ -39,21 +39,7 @@
 	<string name="pref_intervalDefault">40</string>
 	<string name="pref_timeoutDefault">20</string>
 	<string name="pref_thresholdDefault">0.30</string>
-	
-	<string-array name="pref_thresholdLabels">
-		<item>0.05 Newtons</item>
-		<item>0.10 Newtons</item>
-		<item>0.15 Newtons</item>
-		<item>0.20 Newtons</item>
-		<item>0.25 Newtons</item>
-		<item>0.30 Newtons</item>
-		<item>0.35 Newtons</item>
-		<item>0.40 Newtons</item>
-		<item>0.45 Newtons</item>
-		<item>0.50 Newtons</item>
-		<item>0.55 Newtons</item>
-		<item>0.60 Newtons</item>
-	</string-array>
+
 	<string-array name="pref_thresholdValues">
 		<item>0.05</item>
 		<item>0.10</item>

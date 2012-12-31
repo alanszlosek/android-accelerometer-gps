@@ -2,13 +2,16 @@ package com.szlosek.whenmoving;
 
 
 import android.app.ListActivity;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ListAdapter;
+import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
+import android.util.Log;
 
 
 public class DaysActivity extends ListActivity {
@@ -46,12 +49,15 @@ public class DaysActivity extends ListActivity {
 		);
 		setListAdapter(adapter);
 	}
-/*	
+
 	@Override
 	protected void onListItemClick (ListView l, View v, int position, long id) {
-		
+		Cursor c;
+		Intent intent = new Intent();
+		intent.putExtra("id", id);
+		setResult(ListActivity.RESULT_OK, intent);
+		finish();
 	}
-	*/
 	
 	@Override
 	protected void onDestroy() {
