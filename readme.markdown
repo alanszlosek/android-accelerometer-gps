@@ -1,8 +1,6 @@
 When Moving
 ====
 
-This app has been released! [Buy it](https://play.google.com/store/apps/details?id=com.szlosek.whenmoving) on Google Play.
-
 I wanted to track my GPS coordinates in a battery-efficient manner, without having to turn InstaMapper or Geoloqi on and off throughout the day. This app only polls GPS when it detects that you are moving. It also stores coordinates locally (SQLite database) for export (adb pull) later.
 
 Does It Work?
