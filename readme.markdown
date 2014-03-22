@@ -3,6 +3,9 @@ When Moving
 
 I wanted to track my GPS coordinates in a battery-efficient manner, without having to turn InstaMapper or Geoloqi on and off throughout the day. This app only polls GPS when it detects that you are moving. It also stores coordinates locally (SQLite database) for export (adb pull) later.
 
+Note: I've ported this project to Android Studio. Doesn't have Google Maps integration yet, but I've tweaked some of the code.
+https://github.com/alanszlosek/androidstudio-accelerometer-gps
+
 Does It Work?
 ====
 
